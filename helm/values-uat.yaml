@@ -1,0 +1,73 @@
+microservice-chart:
+  namespace: "<namespace>" # TODO
+  nameOverride: ""
+  fullnameOverride: ""
+  image:
+    repository: pagopaucommonacr.azurecr.io/pagopa<project-name>  # TODO
+    tag: "0.0.1"
+    pullPolicy: Always
+  # https://github.com/Azure/azure-functions-host/blob/dev/src/WebJobs.Script.WebHost/Controllers/HostController.cs
+  livenessProbe:
+    httpGet:
+      path: /info
+      port: 80
+    initialDelaySeconds: 60
+    failureThreshold: 6
+    periodSeconds: 10
+  readinessProbe:
+    httpGet:
+      path: /info
+      port: 80
+    initialDelaySeconds: 60
+    failureThreshold: 6
+    periodSeconds: 10
+  deployment:
+    create: true
+  service:
+    create: true
+    type: ClusterIP
+    port: 80
+  ingress:
+    create: true
+    host: "weuuat.<namespace>.internal.uat.platform.pagopa.it"  # TODO
+    path: /pagopa-<project-name>-service/(.*) # TODO
+  serviceAccount:
+    create: false
+    annotations: {}
+    name: ""
+  podAnnotations: {}
+  podSecurityContext:
+    seccompProfile:
+      type: RuntimeDefault
+  securityContext:
+    allowPrivilegeEscalation: false
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "0.25"
+    limits:
+      memory: "512Mi"
+      cpu: "0.25"
+  autoscaling:
+    enable: true
+    minReplica: 3
+    maxReplica: 10
+    pollingInterval: 10 # seconds
+    cooldownPeriod: 50 # seconds
+    triggers:
+      - type: cpu
+        metadata:
+          # Required
+          type: Utilization # Allowed types are 'Utilization' or 'AverageValue'
+          value: "75"
+  envConfig:
+    WEBSITE_SITE_NAME: "pagopa<project-name>" # required to show cloud role name in application insights # TODO
+    FUNCTIONS_WORKER_RUNTIME: "java"
+  envSecret:
+    APPLICATIONINSIGHTS_CONNECTION_STRING: 'ai-d-connection-string' # TODO set in kv
+  keyvault:
+    name: "pagopa-u-<namespace>-kv" # TODO
+    tenantId: "7788edaf-0346-4068-9d79-c868aed15b3d"
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}

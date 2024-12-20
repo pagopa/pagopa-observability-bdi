@@ -1,0 +1,298 @@
+parameters:
+  - name: ENV
+    displayName: Target Environment
+    type: string
+    default: dev
+    values:
+      - dev
+      - uat
+      - prod
+  - name: SEMVER
+    displayName: "When packing a release, define the version bump to apply. Use only buildNumber or skip for manual deployment"
+    type: string
+    values:
+      - major
+      - minor
+      - patch
+      - buildNumber
+      - skip
+    default: skip
+  - name: TEST
+    displayName: Run tests
+    type: boolean
+    default: false
+
+variables:
+  ${{ if eq(parameters['ENV'], 'dev') }}:
+    AZURE_SUBSCRIPTION: $(DEV_AZURE_SUBSCRIPTION)
+    RESOURCE_GROUP: $(DEV_WEB_APP_RESOURCE_GROUP_NAME)
+    APP_NAME: $(DEV_WEB_APP_NAME)
+    STAGE: "d"
+    dockerRegistryServiceConnection: $(DEV_CONTAINER_REGISTRY)
+    dockerNamespace: $(DEV_CONTAINER_NAMESPACE)
+
+  ${{ if eq(parameters['ENV'], 'uat') }}:
+    AZURE_SUBSCRIPTION: $(UAT_AZURE_SUBSCRIPTION)
+    RESOURCE_GROUP: $(UAT_WEB_APP_RESOURCE_GROUP_NAME)
+    APP_NAME: $(UAT_WEB_APP_NAME)
+    STAGE: "u"
+    dockerRegistryServiceConnection: $(UAT_CONTAINER_REGISTRY)
+    dockerNamespace: $(UAT_CONTAINER_NAMESPACE)
+
+  ${{ if eq(parameters['ENV'], 'prod') }}:
+    AZURE_SUBSCRIPTION: $(PROD_AZURE_SUBSCRIPTION)
+    RESOURCE_GROUP: $(PROD_WEB_APP_RESOURCE_GROUP_NAME)
+    APP_NAME: $(PROD_WEB_APP_NAME)
+    STAGE: "p"
+    dockerRegistryServiceConnection: $(PROD_CONTAINER_REGISTRY)
+    dockerNamespace: $(PROD_CONTAINER_NAMESPACE)
+
+  ${{ if eq(variables['Build.SourceBranchName'], 'merge') }}:
+    SOURCE_BRANCH: "main" # force to main branch
+  ${{ if ne(variables['Build.SourceBranchName'], 'merge') }}:
+    SOURCE_BRANCH: ${{ variables['Build.SourceBranchName'] }}
+
+
+
+  MAVEN_CACHE_FOLDER: $(Pipeline.Workspace)/.m2/repository
+  MAVEN_OPTS: "-Dmaven.repo.local=$(MAVEN_CACHE_FOLDER)"
+  title: ""
+  sha: ""
+  tag: ""
+
+# Only manual triggers
+trigger: none
+pr: none
+
+pool:
+  vmImage: ubuntu-latest
+
+stages:
+
+  # Create a release on GitHub
+  - stage: release_service
+    condition: ne('${{ parameters.SEMVER }}', 'skip')
+    pool:
+      vmImage: "ubuntu-latest"
+    jobs:
+      - job: releaseService
+        steps:
+          - checkout: self
+            clean: true
+            persistCredentials: true
+
+          - script: |
+              git checkout $(SOURCE_BRANCH)
+
+          - script: |
+              git config --global user.name "$(GIT_USERNAME)"
+              git config --global user.email "$(GIT_EMAIL)"
+
+          - template: azure-templates/maven-versioning.yml
+            parameters:
+              semver: "${{ parameters.SEMVER }}"
+
+          - task: Bash@3
+            name: pomversion
+            inputs:
+              targetType: "inline"
+              script: |
+                version=$(mvn -f pom.xml help:evaluate -Dexpression=project.version -q -DforceStdout)
+                echo "##vso[task.setvariable variable=next;isOutput=true]$version"
+              failOnStderr: true
+
+          - script: |
+              git add pom.xml
+              git commit -m "Bump version [skip ci]"
+              git push origin $(SOURCE_BRANCH)
+
+
+          - script: |
+              HEAD_SHA=$(git rev-parse HEAD)
+              TAG="$(pomversion.next)"
+              TITLE="Release $(pomversion.next)"
+              echo "##vso[task.setvariable variable=title]$TITLE"
+              echo "##vso[task.setvariable variable=sha]$HEAD_SHA"
+              echo "##vso[task.setvariable variable=tag]$TAG"
+
+          - script: |
+              echo $(tag)
+              echo $(title)
+              echo $(sha)
+
+
+          # create new release
+          - task: GitHubRelease@0
+            inputs:
+              gitHubConnection: $(GITHUB_CONNECTION)
+              repositoryName: $(Build.Repository.Name)
+              action: create
+              target: $(sha)
+              tagSource: manual
+              tag: $(tag)
+              title: $(title)
+              addChangelog: true
+
+  # Deploy on Azure
+  - stage: deploy
+    condition: not(failed('releaseService'))
+    pool:
+      vmImage: "ubuntu-latest"
+    jobs:
+      - job: deployJava
+        steps:
+
+          - script: |
+              echo ${{variables['Build.SourceBranchName']}}        
+              echo $(SOURCE_BRANCH)
+              echo $(TEST)
+
+          - checkout: self
+            clean: true
+            persistCredentials: true
+            submodules: true
+
+          - script: |
+              echo "Checkout on $(SOURCE_BRANCH)"
+              git checkout $(SOURCE_BRANCH)
+            displayName: Checkout on source branch
+
+          #          - task: Bash@3
+          #            name: application_properties
+          #            inputs:
+          #              targetType: "inline"
+          #              script: |
+          #                cp src/main/resources/application-azure-$(STAGE).properties src/main/resources/application.properties
+          #                cat src/main/resources/application.properties
+          #              failOnStderr: true
+
+          - task: Cache@2
+            inputs:
+              key: 'maven | "$(Agent.OS)" | pom.xml'
+              restoreKeys: |
+                maven | "$(Agent.OS)"
+                maven
+              path: $(MAVEN_CACHE_FOLDER)
+            displayName: Set Maven Cache
+
+          - task: Bash@3
+            # When the maven task is installed, mvn can be used in a script
+            name: pomversion
+            inputs:
+              targetType: "inline"
+              script: |
+                version=$(mvn -f pom.xml help:evaluate -Dexpression=project.version -q -DforceStdout)
+                echo "##vso[task.setvariable variable=next;isOutput=true]$version"
+              failOnStderr: true
+
+          - task: Maven@3
+            inputs:
+              mavenPomFile: 'pom.xml'
+              publishJUnitResults: false
+              javaHomeOption: 'JDKVersion'
+              jdkVersionOption: '1.11'
+              mavenVersionOption: 'Default'
+              mavenOptions: '-Xmx3072m $(MAVEN_OPTS)'
+              mavenAuthenticateFeed: false
+              effectivePomSkip: false
+              sonarQubeRunAnalysis: false
+
+          - task: Docker@2
+            displayName: Build and push an image to container registry
+            inputs:
+              containerRegistry: '$(dockerRegistryServiceConnection)'
+              repository: '$(IMAGE_REPOSITORY)'
+              command: 'buildAndPush'
+              tags: |
+                $(Build.BuildId)
+                latest
+                $(pomversion.next)
+
+          # deploy project-fn
+          - task: AzureFunctionAppContainer@1
+            displayName: Deploy Function App [DEV]
+            inputs:
+              azureSubscription: $(AZURE_SUBSCRIPTION)
+              appName: "${{variables.DEV_WEB_APP_NAME}}-fn-project"
+              imageName: "${{variables.DEV_CONTAINER_NAMESPACE}}/project:$(Build.BuildId)"
+              slotName: production
+
+          - script: |
+              echo "##vso[task.setvariable variable=version;isOutput=true]$(pomversion.next)"
+            name: dockerTag
+
+
+  # Run test
+  - stage: test
+    # run this stage only if 'test' is enabled
+    condition: and(not(failed('deployJava')), eq('${{ parameters.TEST }}', 'true'))
+    pool:
+      vmImage: "ubuntu-latest"
+    jobs:
+      # is needed to wait for startup of application
+      - job: waitStartup
+        pool: Server
+        steps:
+          - task: Delay@1
+            inputs:
+              delayForMinutes: '10'
+
+      #      - job: integrationTests
+      #        dependsOn: waitStartup
+      #        steps:
+      #          - script: |
+      #              git checkout $(SOURCE_BRANCH)
+
+      #          - script: |
+      #              yarn global add newman
+      #            displayName: 'newman installation'
+
+      #          - script: |
+      #              newman run api-test/Project.postman_collection.json --environment=api-test/Azure.postman_environment.json --reporters cli,junit --reporter-junit-export Results/api-config-TEST.xml --verbose
+      #            displayName: 'Run api test'
+      #            continueOnError: false
+
+      #          - task: PublishTestResults@2
+      #            condition: always()
+      #            inputs:
+      #              testResultsFormat: 'JUnit'
+      #              testResultsFiles: '**/*-TEST.xml'
+      #              searchFolder: '$(System.DefaultWorkingDirectory)'
+
+      - job: deployUAT
+        dependsOn: integrationTests
+        variables:
+          version: $[ stageDependencies.deploy.deployJava.outputs['dockerTag.version'] ]
+        steps:
+          - task: Maven@3
+            inputs:
+              mavenPomFile: 'pom.xml'
+              publishJUnitResults: false
+              javaHomeOption: 'JDKVersion'
+              jdkVersionOption: '1.11'
+              mavenVersionOption: 'Default'
+              mavenOptions: '-Xmx3072m $(MAVEN_OPTS)'
+              mavenAuthenticateFeed: false
+              effectivePomSkip: false
+              sonarQubeRunAnalysis: false
+
+          - task: Docker@2
+            displayName: Build and push an image to UAT container registry
+            inputs:
+              containerRegistry: '$(UAT_CONTAINER_REGISTRY)'
+              repository: '$(IMAGE_REPOSITORY)'
+              command: 'buildAndPush'
+              tags: |
+                $(Build.BuildId)
+                latest
+                $(version)
+
+          # deploy project-fn
+          - task: AzureFunctionAppContainer@1
+            displayName: Deploy Function App [UAT]
+            condition: in('${{ parameters.ENV }}', 'uat')
+            inputs:
+              azureSubscription: $(AZURE_SUBSCRIPTION)
+              appName: "${{variables.UAT_WEB_APP_NAME}}-fn-project}"
+              imageName: "${{variables.UAT_CONTAINER_NAMESPACE}}/project:$(Build.BuildId)"
+              slotName: production
