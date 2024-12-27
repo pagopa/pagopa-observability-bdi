@@ -28,7 +28,6 @@ hs_err_pid*
 .settings/
 .project
 .classpath
-.vscode/
 
 # macOS
 .DS_Store
@@ -37,3 +36,6 @@ hs_err_pid*
 local.settings.json
 bin/
 obj/
+
+# vscode stuff
+.vscode/
