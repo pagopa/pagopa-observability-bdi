@@ -20,7 +20,7 @@ public class CollectPerf02EData {
 
     @FunctionName("CollectPerf02EDataTimer")
     public void timerTrigger(
-        @TimerTrigger(name = "timer", schedule = "%Perf02EDataTimer%") String timerInfo, 
+        @TimerTrigger(name = "timer", schedule = "%PERF_02E_TIMER_TRIGGER%") String timerInfo, 
         final ExecutionContext context) {
         
         LocalDateTime startDate = LocalDateTime.now().minusHours(1).withMinute(0).withSecond(0);

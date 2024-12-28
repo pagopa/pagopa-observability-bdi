@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.microsoft.azure.functions.ExecutionContext;
 import com.microsoft.azure.functions.HttpMethod;
 import com.microsoft.azure.functions.HttpRequestMessage;
@@ -14,13 +16,14 @@ import com.microsoft.azure.functions.annotation.FunctionName;
 import com.microsoft.azure.functions.annotation.HttpTrigger;
 import com.microsoft.azure.functions.annotation.TimerTrigger;
 
+import it.gov.pagopa.observability.models.PerfDataResponse;
 import it.gov.pagopa.observability.service.PerfKpiService;
 
 public class CollectPerfData {
 
     @FunctionName("CollectPerfDataTimer")
     public void timerTrigger(
-        @TimerTrigger(name = "timer", schedule = "%PerfDataTimer%") String timerInfo, 
+        @TimerTrigger(name = "timer", schedule = "%PERF_DATA_TIMER_TRIGGER%") String timerInfo, 
         final ExecutionContext context) {
 
         LocalDateTime startDate = LocalDateTime.now()
@@ -33,16 +36,19 @@ public class CollectPerfData {
         context.getLogger().info(String.format("CollectPerfData - Timer triggered. Processing interval: %s to %s", startDate, endDate));
 
         executePerf02Kpi(context, startDate, endDate);
+        executePerf03Kpi(context, startDate, endDate);
     }
 
     @FunctionName("CollectPerformanceDataHttp")
     public HttpResponseMessage httpTrigger(
-        @HttpTrigger(name = "req", methods = {HttpMethod.POST, HttpMethod.GET}, authLevel = AuthorizationLevel.FUNCTION)
+        @HttpTrigger(name = "req", methods = {HttpMethod.POST, HttpMethod.GET}, 
+            authLevel = AuthorizationLevel.FUNCTION)
         HttpRequestMessage<Optional<String>> request,
         final ExecutionContext context) {
 
-        String startInput = request.getQueryParameters().get("startDate");
-        String endInput = request.getQueryParameters().get("endDate");
+        String startDateInput = request.getQueryParameters().get("startDate");
+        String endDateInput = request.getQueryParameters().get("endDate");
+        String kpiId = Optional.ofNullable(request.getQueryParameters().get("kpiId")).orElse("ALL_KPI");
 
         LocalDateTime startDate;
         LocalDateTime endDate;
@@ -50,9 +56,9 @@ public class CollectPerfData {
         try {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
 
-            if (startInput != null && endInput != null) {
-                startDate = LocalDateTime.parse(startInput, formatter);
-                endDate = LocalDateTime.parse(endInput, formatter);
+            if (startDateInput != null && endDateInput != null) {
+                startDate = LocalDateTime.parse(startDateInput, formatter);
+                endDate = LocalDateTime.parse(endDateInput, formatter);
             } else {
                 startDate = LocalDateTime.now()
                     .withDayOfMonth(1)
@@ -64,17 +70,46 @@ public class CollectPerfData {
 
             context.getLogger().info(String.format("CollectPerfData - HTTP triggered. Processing interval: %s to %s", startDate, endDate));
 
-            executePerf02Kpi(context, startDate, endDate);
-
+            switch (kpiId) {
+                case "PERF-02":
+                    executePerf02Kpi(context, startDate, endDate);
+                    break;
+                case "PERF-03":
+                    executePerf03Kpi(context, startDate, endDate);
+                    break;
+                default: // ALL_KPI
+                        executePerf02Kpi(context, startDate, endDate);
+                        executePerf03Kpi(context, startDate, endDate);
+                        break;
+            }
+            
+            // Build OK response
+            String message = String.format("CollectPerfData - Processed interval: %s to %s", startDate, endDate);
+            PerfDataResponse response = new PerfDataResponse(String.valueOf(HttpStatus.OK), message);
+            ObjectMapper objectMapper = new ObjectMapper();
+            String responseBody = objectMapper.writeValueAsString(response);
             return request.createResponseBuilder(HttpStatus.OK)
-                .body(String.format("CollectPerfData - Processed interval: %s to %s", startDate, endDate))
-                .build();
+                    .header("Content-Type", "application/json")
+                    .body(responseBody)
+                    .build();
 
         } catch (Exception e) {
             context.getLogger().severe(String.format("CollectPerformanceData - HTTP triggered. Error: %s", e.getMessage()));
+            // Build KO response
+            String message = String.format("CollectPerformanceData - HTTP triggered. Error: %s", e.getMessage());
+            PerfDataResponse response = new PerfDataResponse(String.valueOf(HttpStatus.INTERNAL_SERVER_ERROR), message);
+            ObjectMapper objectMapper = new ObjectMapper();
+            String responseBody = "CollectPerfData - Generic error has occurred: " + e.getMessage();
+            try {
+                responseBody = objectMapper.writeValueAsString(response);
+            } catch (JsonProcessingException e1) {
+                context.getLogger().severe("CollectPerformanceData - HTTP triggered. Error while serializing error response");
+                e1.printStackTrace();
+            }
             return request.createResponseBuilder(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(String.format("CollectPerfData - Error processing interval: %s", e.getMessage()))
-                .build();
+                    .header("Content-Type", "application/json")
+                    .body(responseBody)
+                    .build();
         }
     }
 
@@ -86,5 +121,14 @@ public class CollectPerfData {
         } catch (Exception e) {
             context.getLogger().severe(String.format("CollectPerfData - PERF-02 Error[%s]", e.getMessage()));
         }
+    }
+
+    private void executePerf03Kpi(ExecutionContext context, LocalDateTime startDate, LocalDateTime endDate) {
+        PerfKpiService service = PerfKpiService.getInstance(context);
+        try {
+            service.executePerfKpi(startDate, endDate, "PERF-03");
+        } catch (Exception e) {
+            context.getLogger().severe(String.format("CollectPerfData - PERF-02 Error[%s]", e.getMessage()));
+        } 
     }
 }
