@@ -42,7 +42,7 @@ public class CollectPerfData {
     @FunctionName("CollectPerformanceDataHttp")
     public HttpResponseMessage httpTrigger(
         @HttpTrigger(name = "req", methods = {HttpMethod.POST, HttpMethod.GET}, 
-            authLevel = AuthorizationLevel.FUNCTION)
+            authLevel = AuthorizationLevel.FUNCTION, route = "collectPerfData")
         HttpRequestMessage<Optional<String>> request,
         final ExecutionContext context) {
 

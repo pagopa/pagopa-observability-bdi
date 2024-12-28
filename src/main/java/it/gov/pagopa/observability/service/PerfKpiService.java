@@ -4,9 +4,14 @@ import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
-
+import com.azure.core.credential.TokenCredential;
+import com.azure.core.http.HttpPipelineBuilder;
+import com.azure.core.http.HttpRequest;
+import com.azure.core.http.HttpResponse;
+import com.azure.core.http.policy.BearerTokenAuthenticationPolicy;
+import com.azure.identity.DefaultAzureCredentialBuilder;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.microsoft.azure.functions.ExecutionContext;
 import com.microsoft.azure.kusto.data.Client;
 import com.microsoft.azure.kusto.data.ClientFactory;
@@ -18,11 +23,8 @@ import com.microsoft.azure.kusto.ingest.IngestClientFactory;
 import com.microsoft.azure.kusto.ingest.IngestionProperties;
 import com.microsoft.azure.kusto.ingest.source.StreamSourceInfo;
 
+import com.azure.core.http.HttpMethod;
 import it.gov.pagopa.observability.helper.PerfKpiHelper;
-import okhttp3.HttpUrl;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
 
 public class PerfKpiService {
 
@@ -33,8 +35,6 @@ public class PerfKpiService {
     private String destinationTable;
     private ExecutionContext context;
     private String APP_INSIGHTS_API_URL;
-    private String APP_INSIGHTS_API_KEY;
-    
     
     private PerfKpiService(ExecutionContext context) {
         
@@ -43,7 +43,6 @@ public class PerfKpiService {
         this.destinationTable = System.getenv("ADX_PERF_TABLE");
         this.context = context;
         this.APP_INSIGHTS_API_URL = System.getenv("AAI_API_URL");
-        this.APP_INSIGHTS_API_KEY = System.getenv("AAI_API_KEY");
 
         context.getLogger().info(String.format("|GetPerformanceKpiService|Database Name[%s] Source table[%s] Destination table[%s]", 
             databaseName, sourceTable, destinationTable));
@@ -157,7 +156,7 @@ public class PerfKpiService {
                 startDate.toString(), endDate.toString(), cloudRoleName, operationName
             );
 
-            Double avgDuration = executeAppInsightsQuery(query);
+            Double avgDuration = executeAppInsightsQuery(query, kpiId);
 
             if (avgDuration != null) {
 
@@ -172,39 +171,40 @@ public class PerfKpiService {
         }
     }
 
-    private Double executeAppInsightsQuery(String query) throws Exception {
+    private Double executeAppInsightsQuery(String query, String kpiId) throws Exception {
 
-        OkHttpClient client = new OkHttpClient();
-        HttpUrl.Builder urlBuilder = HttpUrl.parse(APP_INSIGHTS_API_URL).newBuilder();
-        urlBuilder.addQueryParameter("query", query);
+        TokenCredential credential = new DefaultAzureCredentialBuilder().build();
+        String apiUrl =APP_INSIGHTS_API_URL;
+        String scope = "https://api.applicationinsights.io/.default";
 
-        String secret = PerfKpiHelper.getKVSecret(APP_INSIGHTS_API_KEY);
-        Request request = new Request.Builder()
-            .url(urlBuilder.build())
-            .addHeader("x-api-key", secret)
-            .get()
-            .build();
+        HttpPipelineBuilder pipelineBuilder = new HttpPipelineBuilder()
+                .policies(new BearerTokenAuthenticationPolicy(credential, scope));
+        var httpClient = pipelineBuilder.build();
+        String body = String.format("{\"query\": \"%s\"}", query);
 
-        Double avgDuration = null;
-        Response response = client.newCall(request).execute();
-        if (response.isSuccessful()) {
-            String responseBody = response.body().string();
-            context.getLogger().info(String.format("PerformanceKpiService - PERF-03 Application Insights Response: %s", responseBody));
+        HttpRequest request = new HttpRequest(HttpMethod.POST, apiUrl)
+            .setHeader("Content-Type", "application/json")
+            .setBody(body);
 
-            // Parse response JSON
-            JSONObject json = new JSONObject(responseBody);
-            JSONArray tables = json.getJSONArray("tables");
-            if (tables.length() > 0) {
-                JSONArray rows = tables.getJSONObject(0).getJSONArray("rows");
-                if (rows.length() > 0) {
-                    avgDuration = rows.getJSONArray(0).getDouble(0);
-                }
+        HttpResponse response = httpClient.send(request).block();
+        Double avg = null;
+        if (response != null) {
+            String responseBody = response.getBodyAsString().block();
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode rootNode = objectMapper.readTree(responseBody);
+            JsonNode avgNode = rootNode.path("tables").get(0).path("rows").get(0);
+            if (!avgNode.isMissingNode()) {
+                avg = avgNode.asDouble();
+
+            } else {
+                context.getLogger().warning(String.format("PerformanceKpiService - $s No result received from Application Insights query", kpiId));
+                avg = 0d;
             }
         } else {
-            context.getLogger().warning(String.format("PerformanceKpiService - PERF-03 Failed to query Application Insights: %s", response.message()));
+            context.getLogger().warning(String.format("PerformanceKpiService - %s No response received from Application Insights query", kpiId));
+            avg = 0d;
         }
-
-        return avgDuration;
+        return avg;
     }
 
     private void writePerfKpiData(String databaseName, String tableName, LocalDateTime startDate, LocalDateTime endDate, String kpiName, Double kpiValue) throws Exception{

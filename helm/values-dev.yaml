@@ -76,7 +76,6 @@ microservice-chart:
     PERF03_OPERATION_NAME": "d-node-for-psp-api;rev=1 - 637601f8c257810fc0ecfe07"
   envSecret:
     APPLICATIONINSIGHTS_CONNECTION_STRING: 'ai-d-connection-string' # TODO set in kv
-    AAI_API_KEY: "pagopa-d-observ-aai-key"
   keyvault:
     name: "pagopa-d-<namespace>-kv" # TODO
     tenantId: "7788edaf-0346-4068-9d79-c868aed15b3d"
