@@ -77,9 +77,22 @@ public class CollectPerfData {
                 case "PERF-03":
                     executePerf03Kpi(context, startDate, endDate);
                     break;
+                case "PERF-04":
+                    executePerf04Kpi(context, startDate, endDate);
+                    break;
+                case "PERF-05":
+                    executePerf05Kpi(context, startDate, endDate);
+                    break;
+                case "PERF-06":
+                    executePerf06Kpi(context, startDate, endDate);
+                    break;
+                
                 default: // ALL_KPI
                         executePerf02Kpi(context, startDate, endDate);
                         executePerf03Kpi(context, startDate, endDate);
+                        executePerf04Kpi(context, startDate, endDate);
+                        executePerf05Kpi(context, startDate, endDate);
+                        executePerf06Kpi(context, startDate, endDate);
                         break;
             }
             
@@ -128,7 +141,34 @@ public class CollectPerfData {
         try {
             service.executePerfKpi(startDate, endDate, "PERF-03");
         } catch (Exception e) {
-            context.getLogger().severe(String.format("CollectPerfData - PERF-02 Error[%s]", e.getMessage()));
+            context.getLogger().severe(String.format("CollectPerfData - PERF-03 Error[%s]", e.getMessage()));
+        } 
+    }
+
+    private void executePerf04Kpi(ExecutionContext context, LocalDateTime startDate, LocalDateTime endDate) {
+        PerfKpiService service = PerfKpiService.getInstance(context);
+        try {
+            service.executePerfKpi(startDate, endDate, "PERF-04");
+        } catch (Exception e) {
+            context.getLogger().severe(String.format("CollectPerfData - PERF-04 Error[%s]", e.getMessage()));
+        } 
+    }
+
+    private void executePerf05Kpi(ExecutionContext context, LocalDateTime startDate, LocalDateTime endDate) {
+        PerfKpiService service = PerfKpiService.getInstance(context);
+        try {
+            service.executePerfKpi(startDate, endDate, "PERF-05");
+        } catch (Exception e) {
+            context.getLogger().severe(String.format("CollectPerfData - PERF-05 Error[%s]", e.getMessage()));
+        } 
+    }
+
+    private void executePerf06Kpi(ExecutionContext context, LocalDateTime startDate, LocalDateTime endDate) {
+        PerfKpiService service = PerfKpiService.getInstance(context);
+        try {
+            service.executePerfKpi(startDate, endDate, "PERF-06");
+        } catch (Exception e) {
+            context.getLogger().severe(String.format("CollectPerfData - PERF-06 Error[%s]", e.getMessage()));
         } 
     }
 }

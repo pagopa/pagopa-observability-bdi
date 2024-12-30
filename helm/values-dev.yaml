@@ -73,7 +73,10 @@ microservice-chart:
     PERF_02E_TIMER_TRIGGER: "0 0 * * * *"
     AAI_API_URL: "https://api.applicationinsights.io/v1/apps/76537955-6128-45d4-bf32-b0034ed17e4d/query"
     CLOUD_ROLE_NAME: "pagopa-d-apim West Europe"
-    PERF03_OPERATION_NAME": "d-node-for-psp-api;rev=1 - 637601f8c257810fc0ecfe07"
+    PERF-03_OPERATION_NAME: "d-node-for-psp-api;rev=1 - 637601f8c257810fc0ecfe07"
+    PERF-04_OPERATION_NAME: "d-nodo-per-psp-api;rev=1 - 61e9630cb78e981290d7c74c" 
+    PERF-05_OPERATION_NAME: "d-nodo-per-pa-api;rev=1 - 6218976195aa0303ccfcf901" 
+    PERF-06_OPERATION_NAME: "d-node-for-psp-api;rev=1 - 637601f8c257810fc0ecfe07" 
   envSecret:
     APPLICATIONINSIGHTS_CONNECTION_STRING: 'ai-d-connection-string' # TODO set in kv
   keyvault:
