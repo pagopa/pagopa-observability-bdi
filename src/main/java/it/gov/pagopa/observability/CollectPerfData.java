@@ -37,9 +37,12 @@ public class CollectPerfData {
 
         executePerf02Kpi(context, startDate, endDate);
         executePerf03Kpi(context, startDate, endDate);
+        executePerf04Kpi(context, startDate, endDate);
+        executePerf05Kpi(context, startDate, endDate);
+        executePerf06Kpi(context, startDate, endDate);
     }
 
-    @FunctionName("CollectPerformanceDataHttp")
+    @FunctionName("CollectPerfDataHttp")
     public HttpResponseMessage httpTrigger(
         @HttpTrigger(name = "req", methods = {HttpMethod.POST, HttpMethod.GET}, 
             authLevel = AuthorizationLevel.FUNCTION, route = "collectPerfData")
