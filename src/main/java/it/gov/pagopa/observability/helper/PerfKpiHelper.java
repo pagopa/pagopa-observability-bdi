@@ -1,5 +1,4 @@
 package it.gov.pagopa.observability.helper;
-import java.util.Optional;
 
 import com.azure.core.credential.TokenRequestContext;
 import com.azure.identity.AzureCliCredentialBuilder;
@@ -7,6 +6,8 @@ import com.azure.identity.DefaultAzureCredentialBuilder;
 import com.azure.security.keyvault.secrets.SecretClient;
 import com.azure.security.keyvault.secrets.SecretClientBuilder;
 import com.microsoft.azure.kusto.data.auth.ConnectionStringBuilder;
+
+import java.util.Optional;
 
 public class PerfKpiHelper {
 

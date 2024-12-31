@@ -1,10 +1,7 @@
 package it.gov.pagopa.observability.service;
 
-import java.io.ByteArrayInputStream;
-import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
-
 import com.azure.core.credential.TokenCredential;
+import com.azure.core.http.HttpMethod;
 import com.azure.core.http.HttpPipelineBuilder;
 import com.azure.core.http.HttpRequest;
 import com.azure.core.http.HttpResponse;
@@ -22,9 +19,11 @@ import com.microsoft.azure.kusto.ingest.IngestClient;
 import com.microsoft.azure.kusto.ingest.IngestClientFactory;
 import com.microsoft.azure.kusto.ingest.IngestionProperties;
 import com.microsoft.azure.kusto.ingest.source.StreamSourceInfo;
-
-import com.azure.core.http.HttpMethod;
 import it.gov.pagopa.observability.helper.PerfKpiHelper;
+
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 
 public class PerfKpiService {
 
