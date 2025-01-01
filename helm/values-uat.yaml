@@ -63,6 +63,20 @@ microservice-chart:
   envConfig:
     WEBSITE_SITE_NAME: "pagopa<project-name>" # required to show cloud role name in application insights # TODO
     FUNCTIONS_WORKER_RUNTIME: "java"
+    ENVIRONMENT: "local"
+    KEYVAULT_URI: "https://pagopa-u-observ-kv.vault.azure.net/"
+    ADX_CLUSTER_URL: "https://pagopaudataexplorer.westeurope.kusto.windows.net"
+    ADX_DATABASE_NAME: "re"
+    ADX_SOURCE_TABLE: "ReEvent"
+    ADX_PERF_TABLE: "BDI_PERF_KPI"
+    PERF_DATA_TIMER_TRIGGER: "0 0 2 5 * *"
+    PERF_02E_TIMER_TRIGGER: "0 0 * * * *"
+    AAI_API_URL: "https://api.applicationinsights.io/v1/apps/58b37248-3089-47ba-aa07-a2844fabe46a/query"
+    CLOUD_ROLE_NAME: "pagopa-u-apim West Europe"
+    PERF-03_OPERATION_NAME: "u-node-for-psp-api-auth;rev=1 - 63756cf1451c1c01c4186bab"
+    PERF-04_OPERATION_NAME: "u-node-for-psp-api-auth;rev=1 - 63fcb0f539519a2c40fd431a" 
+    PERF-05_OPERATION_NAME: "u-nodo-per-pa-api;rev=1 - 61e96321e0f4ba04a49d1285" 
+    PERF-06_OPERATION_NAME: "u-nodo-per-pa-api;rev=1 - 61e96321e0f4ba04a49d1286"
   envSecret:
     APPLICATIONINSIGHTS_CONNECTION_STRING: 'ai-d-connection-string' # TODO set in kv
   keyvault:
