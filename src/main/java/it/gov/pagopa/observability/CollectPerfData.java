@@ -48,22 +48,34 @@ public class CollectPerfData {
         String endDateInput = request.getQueryParameters().get("endDate");
         String kpiId = Optional.ofNullable(request.getQueryParameters().get("kpiId")).orElse("ALL_KPI");
 
-        LocalDateTime startDate;
-        LocalDateTime endDate;
-
         try {
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
-
-            if (startDateInput != null && endDateInput != null) {
-                startDate = LocalDateTime.parse(startDateInput, formatter);
-                endDate = LocalDateTime.parse(endDateInput, formatter);
+            // Date management
+            LocalDateTime startDate;
+            LocalDateTime endDate;
+            if (kpiId.equalsIgnoreCase("PERF-02E")) {
+                if (startDateInput != null && !startDateInput.isEmpty()) {
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
+                    startDate = LocalDateTime.parse(startDateInput, formatter);
+                } else {
+                    startDate = LocalDateTime.now().minusHours(1).withMinute(0).withSecond(0);
+                }
+                endDate = startDate.plusHours(1);
+                context.getLogger().info(String.format("CollectPerf02EData - PERF-02E HTTP triggered. Processing interval: %s to %s", startDate, endDate));
             } else {
-                startDate = LocalDateTime.now()
-                    .withDayOfMonth(1)
-                    .withHour(0)
-                    .withMinute(0)
-                    .withSecond(0);
-                endDate = startDate.plusMonths(1).minusSeconds(1);
+
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
+
+                if (startDateInput != null && endDateInput != null) {
+                    startDate = LocalDateTime.parse(startDateInput, formatter);
+                    endDate = LocalDateTime.parse(endDateInput, formatter);
+                } else {
+                    startDate = LocalDateTime.now()
+                        .withDayOfMonth(1)
+                        .withHour(0)
+                        .withMinute(0)
+                        .withSecond(0);
+                    endDate = startDate.plusMonths(1).minusSeconds(1);
+                }
             }
 
             context.getLogger().info(String.format("CollectPerfData - HTTP triggered. Processing interval: %s to %s", startDate, endDate));
@@ -71,6 +83,9 @@ public class CollectPerfData {
             switch (kpiId) {
                 case "PERF-02":
                     executePerf02Kpi(context, startDate, endDate);
+                    break;
+                case "PERF-02E":
+                    executePerf02EKpi(context, startDate, endDate);
                     break;
                 case "PERF-03":
                     executePerf03Kpi(context, startDate, endDate);
@@ -84,14 +99,15 @@ public class CollectPerfData {
                 case "PERF-06":
                     executePerf06Kpi(context, startDate, endDate);
                     break;
-                
+                    
                 default: // ALL_KPI
-                        executePerf02Kpi(context, startDate, endDate);
-                        executePerf03Kpi(context, startDate, endDate);
-                        executePerf04Kpi(context, startDate, endDate);
-                        executePerf05Kpi(context, startDate, endDate);
-                        executePerf06Kpi(context, startDate, endDate);
-                        break;
+                    executePerf02Kpi(context, startDate, endDate);
+                    executePerf02EKpi(context, startDate, endDate);
+                    executePerf03Kpi(context, startDate, endDate);
+                    executePerf04Kpi(context, startDate, endDate);
+                    executePerf05Kpi(context, startDate, endDate);
+                    executePerf06Kpi(context, startDate, endDate);
+                    break;
             }
             
             // Build OK response
@@ -168,5 +184,15 @@ public class CollectPerfData {
         } catch (Exception e) {
             context.getLogger().severe(String.format("CollectPerfData - PERF-06 Error[%s]", e.getMessage()));
         } 
+    }
+
+    private void executePerf02EKpi(ExecutionContext context, LocalDateTime startDate, LocalDateTime endDate) {
+        PerfKpiService service = PerfKpiService.getInstance(context);
+
+        try {
+            service.executePerf02EKpi(startDate, endDate);
+        } catch (Exception e) {
+            context.getLogger().severe(String.format("CollectPerf02EData - PERF-02E Error[%s]", e.getMessage()));
+        }
     }
 }

@@ -31,44 +31,6 @@ public class CollectPerf02EData {
         executePerf02EKpi(context, startDate, endDate);
     }
 
-    @FunctionName("CollectPerf02EDataHttp")
-    public HttpResponseMessage httpTrigger(
-        @HttpTrigger(name = "req", methods = {HttpMethod.POST, HttpMethod.GET}, authLevel = AuthorizationLevel.FUNCTION, route = "cllectPerf02Data") 
-        HttpRequestMessage<Optional<String>> request,
-        final ExecutionContext context) {
-
-        String inputDate = request.getQueryParameters().get("startDate");
-        if (inputDate == null && request.getBody().isPresent()) {
-            inputDate = request.getBody().get();
-        }
-
-        LocalDateTime startDate;
-        LocalDateTime endDate;
-
-        try {
-            if (inputDate != null && !inputDate.isEmpty()) {
-                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
-                startDate = LocalDateTime.parse(inputDate, formatter);
-            } else {
-                startDate = LocalDateTime.now().minusHours(1).withMinute(0).withSecond(0);
-            }
-            endDate = startDate.plusHours(1);
-
-            context.getLogger().info(String.format("CollectPerf02EData - PERF-02E HTTP triggered. Processing interval: %s to %s", startDate, endDate));
-
-            executePerf02EKpi(context, startDate, endDate);
-
-            return request.createResponseBuilder(HttpStatus.OK)
-                .body(String.format("CollectPerf02EData - PERF-02E Processed interval: %s to %s", startDate, endDate))
-                .build();
-        } catch (Exception e) {
-            context.getLogger().severe(String.format("HTTP triggered. Error: %s", e.getMessage()));
-            return request.createResponseBuilder(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(String.format("CollectPerf02EData - PERF-02E Error processing interval: %s", e.getMessage()))
-                .build();
-        }
-    }
-
     private void executePerf02EKpi(ExecutionContext context, LocalDateTime startDate, LocalDateTime endDate) {
         PerfKpiService service = PerfKpiService.getInstance(context);
 
