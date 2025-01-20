@@ -34,6 +34,7 @@ public class CollectPerfDataTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     void testHttpTriggerSuccess() {
         // Arrange
         // Mock HttpRequestMessage
@@ -63,6 +64,7 @@ public class CollectPerfDataTest {
         //assertTrue(responseBody.contains("\"message\":\"CollectPerfData - Processed interval"));
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     void testHttpTriggerWithDefaultParams() {
         // Arrange
@@ -86,6 +88,7 @@ public class CollectPerfDataTest {
         //assertEquals(200, response.getStatusCode());
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     void testHttpTriggerError() {
         // Arrange
