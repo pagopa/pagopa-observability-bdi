@@ -1,5 +1,5 @@
 microservice-chart:
-  namespace: "observability"
+  namespace: "qi"
   nameOverride: ""
   fullnameOverride: ""
   image:
@@ -29,7 +29,7 @@ microservice-chart:
     port: 80
   ingress:
     create: true
-    host: "weuprod.observability.internal.platform.pagopa.it"
+    host: "weuprod.qi.internal.platform.pagopa.it"
     path: /pagopa-observability-bdi-service/(.*)
   serviceAccount:
     create: false
@@ -86,7 +86,7 @@ microservice-chart:
     EVENT_HUB_KEY: "event-hub-key"
     BETTERSTACK_API_KEY: "better-stack-api-key"
   keyvault:
-    name: "pagopa-p-observability-kv"
+    name: "pagopa-p-qi-kv"
     tenantId: "7788edaf-0346-4068-9d79-c868aed15b3d"
   nodeSelector: {}
   tolerations: []
