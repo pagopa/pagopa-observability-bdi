@@ -32,7 +32,7 @@ public class Info {
 		context.getLogger().log(Level.INFO, "Invoked health check HTTP trigger for pagopa-observability-bdi.");
 		return request.createResponseBuilder(HttpStatus.OK)
 				.header("Content-Type", "application/json")
-				.body(getInfo(context.getLogger(), "/META-INF/maven/it.gov.pagopa.reporting/reporting-batch/pom.properties"))
+				.body(getInfo(context.getLogger(), "/META-INF/maven/it.gov.pagopa.observability/observability-bdi/pom.properties"))
 				.build();
 	}
 
