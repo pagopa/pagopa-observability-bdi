@@ -21,7 +21,7 @@ jobs:
     steps:
 
       - name: Verify PR Labels
-        uses: jesusvasquez333/verify-pr-label-action@v1.4.0
+        uses: jesusvasquez333/verify-pr-label-action@657d111bbbe13e22bbd55870f1813c699bde1401 # v1.4.0
         with:
           github-token: '${{ secrets.GITHUB_TOKEN }}'
           valid-labels: 'bug, enhancement, breaking-change, ignore-for-release'
@@ -29,7 +29,7 @@ jobs:
 
       - name: Label Check
         if: ${{ !contains(github.event.pull_request.labels.*.name, 'breaking-change') && !contains(github.event.pull_request.labels.*.name, 'enhancement') && !contains(github.event.pull_request.labels.*.name, 'bug') && !contains(github.event.pull_request.labels.*.name, 'ignore-for-release') }}
-        uses: actions/github-script@v3
+        uses: actions/github-script@ffc2c79a5b2490bd33e0a41c1de74b877714d736 # v3
         with:
           script: |
             core.setFailed('Missing required labels')
