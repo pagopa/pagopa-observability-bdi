@@ -82,7 +82,7 @@ microservice-chart:
   envSecret:
     APPLICATIONINSIGHTS_CONNECTION_STRING: 'ai-d-connection-string'
     AZURE_AD_CLIENT_SECRET: "azure-ad-client-secret"
-    APP_INSIGHTS_CONNECTION_STRING: "app-insigths-connection-string"
+    APP_INSIGHTS_CONNECTION_STRING: "ai-connection-string"
     EVENT_HUB_KEY: "evh-tx-bdi-kpi-key"
     BETTERSTACK_API_KEY: "betterstack-api-key"
   keyvault:
