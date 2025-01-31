@@ -1,11 +1,11 @@
 package it.gov.pagopa.observability.service;
 
-import com.azure.core.credential.TokenCredential;
 import com.azure.core.http.HttpMethod;
+import com.azure.core.http.HttpPipeline;
 import com.azure.core.http.HttpPipelineBuilder;
 import com.azure.core.http.HttpRequest;
 import com.azure.core.http.HttpResponse;
-import com.azure.core.http.policy.BearerTokenAuthenticationPolicy;
+import com.azure.core.http.policy.RetryPolicy;
 import com.azure.identity.DefaultAzureCredentialBuilder;
 import com.azure.messaging.eventhubs.EventData;
 import com.azure.messaging.eventhubs.EventDataBatch;
@@ -46,6 +46,7 @@ public class PerfKpiService {
     private final ExecutionContext CONTEXT;
     private final String BETTERSTACK_API_URL;
     private final String BETTERSTACK_API_KEY;
+    private final String APP_INSIGHTS_CONNECTION_STRING;
 
     private PerfKpiService(ExecutionContext context) {
         
@@ -53,6 +54,7 @@ public class PerfKpiService {
         this.ADX_SOURCE_TABLE = System.getenv("ADX_SOURCE_TABLE");
         this.ADX_PERF_TABLE = System.getenv("ADX_PERF_TABLE");
         this.APP_INSIGHTS_API_URL = System.getenv("AAI_API_URL");
+        this.APP_INSIGHTS_CONNECTION_STRING = System.getenv("APP_INSIGHTS_CONNECTION_STRING");
         this.BETTERSTACK_API_URL = System.getenv("BETTERSTACK_API_URL");
         this.CONTEXT = context;
         
@@ -226,38 +228,66 @@ public class PerfKpiService {
 
     private String executeAppInsightsQuery(String query, String kpiId) throws Exception {
 
-        TokenCredential credential = new DefaultAzureCredentialBuilder().build();
-        String scope = "https://api.applicationinsights.io/.default";
+        String appId = extractAppIdFromConnectionString(APP_INSIGHTS_CONNECTION_STRING);
+        if (appId == null) {
+            throw new IllegalStateException("Application Insights app ID is missing from the connection string.");
+        }
 
-        HttpPipelineBuilder pipelineBuilder = new HttpPipelineBuilder()
-                .policies(new BearerTokenAuthenticationPolicy(credential, scope));
-        var httpClient = pipelineBuilder.build();
+        String requestUrl = String.format(APP_INSIGHTS_API_URL, appId);
+
         String body = String.format("{\"query\": \"%s\"}", query);
 
-        HttpRequest request = new HttpRequest(HttpMethod.POST, APP_INSIGHTS_API_URL)
-            .setHeader("Content-Type", "application/json")
-            .setBody(body);
+        HttpRequest request = new HttpRequest(HttpMethod.POST, requestUrl)
+                .setHeader("Content-Type", "application/json")
+                .setHeader("x-api-key", extractApiKeyFromConnectionString(APP_INSIGHTS_CONNECTION_STRING)) 
+                .setBody(body);
 
-        HttpResponse response = httpClient.send(request).block();
+        com.azure.core.http.HttpClient httpClient = com.azure.core.http.HttpClient.createDefault();
+        HttpPipeline httpPipeline = new HttpPipelineBuilder()
+                .httpClient(httpClient)
+                .policies(new RetryPolicy())
+                .build();
 
-        String avg;
+        // Esecuzione della richiesta HTTP
+        HttpResponse response = httpPipeline.send(request).block();
+
         if (response != null) {
             String responseBody = response.getBodyAsString().block();
-            ObjectMapper objectMapper = new ObjectMapper();
-            JsonNode rootNode = objectMapper.readTree(responseBody);
-            JsonNode avgNode = rootNode.path("tables").get(0).path("rows").get(0);
-            if (!avgNode.isMissingNode()) {
-                avg = avgNode.get(0).asText();
-
-            } else {
-                CONTEXT.getLogger().warning(String.format("PerformanceKpiService - %s No result received from Application Insights query", kpiId));
-                avg = "0";
-            }
+            return extractValueFromResponse(responseBody, kpiId);
         } else {
-            CONTEXT.getLogger().warning(String.format("PerformanceKpiService - %s No response received from Application Insights query", kpiId));
-            avg = "0";
+            System.err.println(String.format("PerformanceKpiService - %s No response received from Application Insights query", kpiId));
+            return "0";
         }
-        return avg;
+    }
+
+    private String extractAppIdFromConnectionString(String connectionString) {
+        for (String part : connectionString.split(";")) {
+            if (part.startsWith("AppId=")) {
+                return part.split("=")[1];
+            }
+        }
+        return null;
+    }
+
+    private String extractApiKeyFromConnectionString(String connectionString) {
+        for (String part : connectionString.split(";")) {
+            if (part.startsWith("ApiKey=")) {
+                return part.split("=")[1];
+            }
+        }
+        return null;
+    }
+
+    private String extractValueFromResponse(String responseBody, String kpiId) throws Exception {
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode rootNode = objectMapper.readTree(responseBody);
+        JsonNode avgNode = rootNode.path("tables").get(0).path("rows").get(0);
+        if (!avgNode.isMissingNode()) {
+            return avgNode.get(0).asText();
+        } else {
+            System.err.println(String.format("PerformanceKpiService - %s No result received from Application Insights query", kpiId));
+            return "0";
+        }
     }
 
     private void writePerfKpiData(String databaseName, 

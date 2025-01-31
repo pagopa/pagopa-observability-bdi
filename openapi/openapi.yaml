@@ -1,8 +1,13 @@
 openapi: 3.0.1
 info:
-  title: Azure Functions API
-  description: API documentation for Azure Functions with HTTP triggers.
+  title: qi-observability-perf-kpi
+  description: API for monitoring performance KPIs.
   version: 1.0.0
+servers:
+  - url: http://localhost:8080
+tags:
+  - name: bdi
+  - name: observability
 paths:
   /perfData:
     get:
