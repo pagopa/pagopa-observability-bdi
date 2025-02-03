@@ -46,7 +46,7 @@ public class PerfKpiService {
     private final ExecutionContext CONTEXT;
     private final String BETTERSTACK_API_URL;
     private final String BETTERSTACK_API_KEY;
-    private final String APP_INSIGHTS_CONNECTION_STRING;
+    private final String APP_INSIGHTS_API_KEY;
 
     private PerfKpiService(ExecutionContext context) {
         
@@ -54,7 +54,6 @@ public class PerfKpiService {
         this.ADX_SOURCE_TABLE = System.getenv("ADX_SOURCE_TABLE");
         this.ADX_PERF_TABLE = System.getenv("ADX_PERF_TABLE");
         this.APP_INSIGHTS_API_URL = System.getenv("AAI_API_URL");
-        this.APP_INSIGHTS_CONNECTION_STRING = System.getenv("APP_INSIGHTS_CONNECTION_STRING");
         this.BETTERSTACK_API_URL = System.getenv("BETTERSTACK_API_URL");
         this.CONTEXT = context;
         
@@ -65,17 +64,23 @@ public class PerfKpiService {
                 .credential(new DefaultAzureCredentialBuilder().build())
                 .buildClient();
 
-        String secretName = System.getenv("BETTERSTACK_API_KEY");
-        String secretValue = "";
+        String bsSecretName = System.getenv("BETTERSTACK_API_KEY");
+        String bsSecretValue = "";
+        String aiSecretName = System.getenv("APP_INSIGHTS_API_KEY");
+        String aiSecretValue = "";
         try {
-            secretValue = secretClient.getSecret(secretName).getValue();
+            bsSecretValue = secretClient.getSecret(bsSecretName).getValue();
+            aiSecretValue = secretClient.getSecret(aiSecretName).getValue();
         } catch (Exception e) {
-            context.getLogger().severe(String.format("PerfKpiService - Error while retrieving BETTERSTACK_API_KEY " +
+            context.getLogger().severe(String.format("PerfKpiService - Error while retrieving BETTERSTACK_API_KEY or APP_INSIGHTS_API_KEY " +
                     "Error: %s", e.getMessage()));
             throw e;
         }
 
-        this.BETTERSTACK_API_KEY = secretValue;
+        this.BETTERSTACK_API_KEY = bsSecretValue;
+        this.APP_INSIGHTS_API_KEY = aiSecretValue;
+
+
         
         context.getLogger().info(String.format("|GetPerformanceKpiService|Database Name[%s] Source table[%s] Destination table[%s]", 
             databaseName, ADX_SOURCE_TABLE, ADX_PERF_TABLE));
@@ -226,26 +231,31 @@ public class PerfKpiService {
         }
     }    
 
-    private String executeAppInsightsQuery(String query, String kpiId) throws Exception {
+    /**
+     * Execute a query on Application Insights.
+     * @param query    Query Kusto to execute
+     * @param kpiId    KPI id to compute
+     * @return         the value for the specified kpi
+     * @throws Exception in case of error
+     */
+    public String executeAppInsightsQuery(String query, String kpiId) throws Exception {
 
-        String appId = extractAppIdFromConnectionString(APP_INSIGHTS_CONNECTION_STRING);
-        if (appId == null) {
-            throw new IllegalStateException("Application Insights app ID is missing from the connection string.");
+        if (APP_INSIGHTS_API_URL == null || APP_INSIGHTS_API_URL.isEmpty() || APP_INSIGHTS_API_KEY == null || APP_INSIGHTS_API_KEY.isEmpty()) {
+            throw new IllegalArgumentException("API URL o API Key non possono essere nulli o vuoti.");
         }
-
-        String requestUrl = String.format(APP_INSIGHTS_API_URL, appId);
 
         String body = String.format("{\"query\": \"%s\"}", query);
 
-        HttpRequest request = new HttpRequest(HttpMethod.POST, requestUrl)
+        HttpRequest request = new HttpRequest(HttpMethod.POST, APP_INSIGHTS_API_URL)
                 .setHeader("Content-Type", "application/json")
-                .setHeader("x-api-key", extractApiKeyFromConnectionString(APP_INSIGHTS_CONNECTION_STRING)) 
+                .setHeader("x-api-key", APP_INSIGHTS_API_KEY)
                 .setBody(body);
 
+        // Creazione dell'HttpClient
         com.azure.core.http.HttpClient httpClient = com.azure.core.http.HttpClient.createDefault();
         HttpPipeline httpPipeline = new HttpPipelineBuilder()
                 .httpClient(httpClient)
-                .policies(new RetryPolicy())
+                .policies(new RetryPolicy())  // Aggiunge retry automatici in caso di failure transitoria
                 .build();
 
         // Esecuzione della richiesta HTTP
@@ -260,28 +270,19 @@ public class PerfKpiService {
         }
     }
 
-    private String extractAppIdFromConnectionString(String connectionString) {
-        for (String part : connectionString.split(";")) {
-            if (part.startsWith("AppId=")) {
-                return part.split("=")[1];
-            }
-        }
-        return null;
-    }
-
-    private String extractApiKeyFromConnectionString(String connectionString) {
-        for (String part : connectionString.split(";")) {
-            if (part.startsWith("ApiKey=")) {
-                return part.split("=")[1];
-            }
-        }
-        return null;
-    }
-
+    /**
+     * Extracts the value from the json object returned by Application Insights.
+     *
+     * @param responseBody Application Insights json response
+     * @param kpiId        KPI id
+     * @return             the value calculated by the query, or "0" if empty
+     * @throws Exception in case of error
+     */
     private String extractValueFromResponse(String responseBody, String kpiId) throws Exception {
         ObjectMapper objectMapper = new ObjectMapper();
         JsonNode rootNode = objectMapper.readTree(responseBody);
         JsonNode avgNode = rootNode.path("tables").get(0).path("rows").get(0);
+
         if (!avgNode.isMissingNode()) {
             return avgNode.get(0).asText();
         } else {
