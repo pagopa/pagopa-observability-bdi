@@ -1,10 +1,18 @@
 package it.gov.pagopa.observability.service;
 
-import com.azure.core.credential.AzureNamedKeyCredential;
+import com.azure.core.http.HttpMethod;
+import com.azure.core.http.HttpPipeline;
+import com.azure.core.http.HttpPipelineBuilder;
+import com.azure.core.http.HttpRequest;
+import com.azure.core.http.HttpResponse;
+import com.azure.core.http.policy.RetryPolicy;
+import com.azure.identity.DefaultAzureCredentialBuilder;
 import com.azure.messaging.eventhubs.EventData;
 import com.azure.messaging.eventhubs.EventDataBatch;
 import com.azure.messaging.eventhubs.EventHubClientBuilder;
 import com.azure.messaging.eventhubs.EventHubProducerClient;
+import com.azure.security.keyvault.secrets.SecretClient;
+import com.azure.security.keyvault.secrets.SecretClientBuilder;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.microsoft.azure.functions.ExecutionContext;
@@ -19,13 +27,8 @@ import com.microsoft.azure.kusto.ingest.IngestionProperties;
 import com.microsoft.azure.kusto.ingest.source.StreamSourceInfo;
 import it.gov.pagopa.observability.helper.PerfKpiHelper;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
 import java.net.URI;
-import java.net.URL;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
@@ -40,34 +43,45 @@ public class PerfKpiService {
     private final String ADX_SOURCE_TABLE;
     private final String ADX_PERF_TABLE;
     private final String APP_INSIGHTS_API_URL;
+    private final ExecutionContext CONTEXT;
     private final String BETTERSTACK_API_URL;
     private final String BETTERSTACK_API_KEY;
     private final String APP_INSIGHTS_API_KEY;
-    private final String CLOUD_ROLE_NAME;
-    private final String EVENT_HUB_NAME;
-    private final String EVENT_HUB_NAMESPACE;
-    private final String EVENT_HUB_KEY_NAME;
-    private final String EVENT_HUB_KEY;
-    private final ExecutionContext CONTEXT;
-
 
     private PerfKpiService(ExecutionContext context) {
         
         this.databaseName = System.getenv("ADX_DATABASE_NAME");
         this.ADX_SOURCE_TABLE = System.getenv("ADX_SOURCE_TABLE");
         this.ADX_PERF_TABLE = System.getenv("ADX_PERF_TABLE");
-        this.APP_INSIGHTS_API_URL = System.getenv("APP_INSIGHTS_API_URL");
+        this.APP_INSIGHTS_API_URL = System.getenv("AAI_API_URL");
         this.BETTERSTACK_API_URL = System.getenv("BETTERSTACK_API_URL");
-        this.BETTERSTACK_API_KEY = System.getenv("BETTERSTACK_API_KEY");
-        this.APP_INSIGHTS_API_KEY = System.getenv("APP_INSIGHTS_API_KEY");
-        this.CLOUD_ROLE_NAME = System.getenv("CLOUD_ROLE_NAME");
-        this.EVENT_HUB_NAME = System.getenv("EVENT_HUB_NAME");
-        this.EVENT_HUB_NAMESPACE = System.getenv("EVENT_HUB_NAMESPACE");
-        this.EVENT_HUB_KEY_NAME = System.getenv("EVENT_HUB_KEY_NAME");
-        this.EVENT_HUB_KEY = System.getenv("EVENT_HUB_KEY");
         this.CONTEXT = context;
+        
+        // get betterstack api key from keyvault
+        String keyVaultUrl = System.getenv("KEYVAULT_URI");
+        SecretClient secretClient = new SecretClientBuilder()
+                .vaultUrl(keyVaultUrl)
+                .credential(new DefaultAzureCredentialBuilder().build())
+                .buildClient();
+
+        String bsSecretName = System.getenv("BETTERSTACK_API_KEY");
+        String bsSecretValue = "";
+        String aiSecretName = System.getenv("APP_INSIGHTS_API_KEY");
+        String aiSecretValue = "";
+        try {
+            bsSecretValue = secretClient.getSecret(bsSecretName).getValue();
+            aiSecretValue = secretClient.getSecret(aiSecretName).getValue();
+        } catch (Exception e) {
+            context.getLogger().severe(String.format("PerfKpiService - Error while retrieving BETTERSTACK_API_KEY or APP_INSIGHTS_API_KEY " +
+                    "Error: %s", e.getMessage()));
+            throw e;
+        }
+
+        this.BETTERSTACK_API_KEY = bsSecretValue;
+        this.APP_INSIGHTS_API_KEY = aiSecretValue;
 
 
+        
         context.getLogger().info(String.format("|GetPerformanceKpiService|Database Name[%s] Source table[%s] Destination table[%s]", 
             databaseName, ADX_SOURCE_TABLE, ADX_PERF_TABLE));
     }
@@ -91,12 +105,8 @@ public class PerfKpiService {
             "| project count",
             startDate, endDate, ADX_SOURCE_TABLE
         );
-    
-        // Create connection and client
         ConnectionStringBuilder csb = PerfKpiHelper.getConnectionStringBuilder();
         Client kustoClient = ClientFactory.createClient(csb);
-    
-        // Execute the query
         KustoOperationResult result = kustoClient.execute(databaseName, perf02Query);
         int count = 0;
         KustoResultSetTable resultSet = null;
@@ -106,17 +116,14 @@ public class PerfKpiService {
                 count = resultSet.getInt("count");
             }
         }
-    
         CONTEXT.getLogger().info(String.format("PerformanceKpiService - " +
                 "PERF-02 Query Result[%s] startDate[%s] endDate[%s]", count, startDate, endDate));
-    
-        // Insert the result into the destination table
+
+        // insert the result into the destination table
         writePerfKpiData(databaseName, ADX_PERF_TABLE, startDate, endDate, "PERF-02", Integer.toString(count));
         CONTEXT.getLogger().info(String.format("PerformanceKpiService - PERF-02 Query Result[%s] startDate[%s] endDate[%s]", count, startDate, endDate));
-    
         return count;
     }
-    
 
     public int executePerf02EKpi(LocalDateTime startDate, LocalDateTime endDate) throws Exception {
 
@@ -135,12 +142,9 @@ public class PerfKpiService {
             "| project count",
             startDate, endDate, ADX_SOURCE_TABLE
         );
-    
-        // Create connection and client
+
         ConnectionStringBuilder csb = PerfKpiHelper.getConnectionStringBuilder();
         Client kustoClient = ClientFactory.createClient(csb);
-
-        // Execute query
         KustoOperationResult result = kustoClient.execute(databaseName, perf0E2Query);
         int count = 0;
         KustoResultSetTable resultSet = null;
@@ -160,15 +164,12 @@ public class PerfKpiService {
     public double executePerfKpi(LocalDateTime startDate, LocalDateTime endDate, String kpiId) throws Exception {
 
         try {
-
             CONTEXT.getLogger().info(String.format("PerformanceKpiService - %s calculating KPI for period: %s to %s", kpiId, startDate, endDate));
-            
-            if (APP_INSIGHTS_API_KEY == null) {
-                throw new IllegalStateException("The environment variable APP_INSIGHTS_API_KEY is not configured");
-            }
+
+            String cloudRoleName = System.getenv("CLOUD_ROLE_NAME");
+            String operationName = System.getenv(kpiId + "_OPERATION_NAME");
 
             // Query Application Insights
-            String operationName = System.getenv(kpiId + "_OPERATION_NAME");
             String query = String.format(
                 "requests | where timestamp between (todatetime('%s') .. todatetime('%s')) "
                     + "| where cloud_RoleName == '%s' "
@@ -176,42 +177,14 @@ public class PerfKpiService {
                     + "| where operation_Name == '%s' "
                     + "| summarize avg = avg(duration)"
                     + "| project avg",
-                startDate.toString(), endDate.toString(), CLOUD_ROLE_NAME, operationName
+                startDate.toString(), endDate.toString(), cloudRoleName, operationName
             );
-            String payload = String.format("{\"query\": \"%s\"}", query);
 
-            // Create connection
-            HttpURLConnection conn = (HttpURLConnection) new URL(APP_INSIGHTS_API_URL).openConnection();
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("x-api-key", APP_INSIGHTS_API_KEY);
-            conn.setRequestProperty("Content-Type", "application/json");
-            conn.setDoOutput(true);
+            String avgDuration = executeAppInsightsQuery(query, kpiId);
 
-            // Execute request
-            try (OutputStream os = conn.getOutputStream()) {
-                os.write(payload.getBytes());
-                os.flush();
-            }
-
-            // Read response
-            if (conn.getResponseCode() != 200) {
-                throw new RuntimeException("PerformanceKpiService - Errore durante la chiamata ad Application Insights: " + conn.getResponseCode());
-            }
-
-            StringBuilder response = new StringBuilder();
-            try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
-                String line;
-                while ((line = br.readLine()) != null) {
-                    response.append(line);
-                }
-            }
-            conn.disconnect();
-            
-            // parse appinsight json response
-            String avgDuration = parseAppInsightsResponse(response.toString());
-
+            //avgDuration = Math.round(avgDuration * 100.0) / 100.0;
             writePerfKpiData(databaseName, ADX_PERF_TABLE, startDate, endDate, kpiId, avgDuration);
-            CONTEXT.getLogger().info("PerformanceKpiService - KPI record successfully inserted into Azure Data Explorer Table");
+            CONTEXT.getLogger().info("KPI record successfully inserted into Azure Table.");
 
             return Double.valueOf(avgDuration);
 
@@ -221,30 +194,6 @@ public class PerfKpiService {
         }
     }
 
-    private String parseAppInsightsResponse(String response) {
-        try {
-            ObjectMapper objectMapper = new ObjectMapper();
-    
-            JsonNode rootNode = objectMapper.readTree(response);  
-            JsonNode tablesNode = rootNode.path("tables");
-            if (tablesNode.isArray() && tablesNode.size() > 0) {
-                JsonNode firstTable = tablesNode.get(0);
-                JsonNode rowsNode = firstTable.path("rows");
-    
-                if (rowsNode.isArray() && rowsNode.size() > 0) {
-                    JsonNode firstRow = rowsNode.get(0);
-                    if (firstRow.isArray() && firstRow.size() > 0) {
-                        // return avg value
-                        return firstRow.get(0).asText(); 
-                    }
-                }
-            }
-            return "0";
-        } catch (Exception e) {
-            throw new RuntimeException("Error while parsing JSON response from AppInsight", e);
-        }
-    }
-    
     public void executePerf01Kpi(LocalDateTime startDate, LocalDateTime endDate) throws Exception {
 
         DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -282,6 +231,66 @@ public class PerfKpiService {
         }
     }    
 
+    /**
+     * Execute a query on Application Insights.
+     * @param query    Query Kusto to execute
+     * @param kpiId    KPI id to compute
+     * @return         the value for the specified kpi
+     * @throws Exception in case of error
+     */
+    public String executeAppInsightsQuery(String query, String kpiId) throws Exception {
+
+        if (APP_INSIGHTS_API_URL == null || APP_INSIGHTS_API_URL.isEmpty() || APP_INSIGHTS_API_KEY == null || APP_INSIGHTS_API_KEY.isEmpty()) {
+            throw new IllegalArgumentException("API URL o API Key non possono essere nulli o vuoti.");
+        }
+
+        String body = String.format("{\"query\": \"%s\"}", query);
+
+        HttpRequest request = new HttpRequest(HttpMethod.POST, APP_INSIGHTS_API_URL)
+                .setHeader("Content-Type", "application/json")
+                .setHeader("x-api-key", APP_INSIGHTS_API_KEY)
+                .setBody(body);
+
+        // Creazione dell'HttpClient
+        com.azure.core.http.HttpClient httpClient = com.azure.core.http.HttpClient.createDefault();
+        HttpPipeline httpPipeline = new HttpPipelineBuilder()
+                .httpClient(httpClient)
+                .policies(new RetryPolicy())  // Aggiunge retry automatici in caso di failure transitoria
+                .build();
+
+        // Esecuzione della richiesta HTTP
+        HttpResponse response = httpPipeline.send(request).block();
+
+        if (response != null) {
+            String responseBody = response.getBodyAsString().block();
+            return extractValueFromResponse(responseBody, kpiId);
+        } else {
+            System.err.println(String.format("PerformanceKpiService - %s No response received from Application Insights query", kpiId));
+            return "0";
+        }
+    }
+
+    /**
+     * Extracts the value from the json object returned by Application Insights.
+     *
+     * @param responseBody Application Insights json response
+     * @param kpiId        KPI id
+     * @return             the value calculated by the query, or "0" if empty
+     * @throws Exception in case of error
+     */
+    private String extractValueFromResponse(String responseBody, String kpiId) throws Exception {
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode rootNode = objectMapper.readTree(responseBody);
+        JsonNode avgNode = rootNode.path("tables").get(0).path("rows").get(0);
+
+        if (!avgNode.isMissingNode()) {
+            return avgNode.get(0).asText();
+        } else {
+            System.err.println(String.format("PerformanceKpiService - %s No result received from Application Insights query", kpiId));
+            return "0";
+        }
+    }
+
     private void writePerfKpiData(String databaseName, 
                                     String tableName, 
                                     LocalDateTime startDate, 
@@ -301,13 +310,10 @@ public class PerfKpiService {
             kpiName,
             kpiValue
         );
-        
-        // Create connection string using Application ID & Secret
-        ConnectionStringBuilder csb = PerfKpiHelper.getConnectionStringBuilder();
-            
+
         // prepare ingestion
         ByteArrayInputStream ingestQueryStream = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
-        IngestClient ingestClient = IngestClientFactory.createClient(csb);
+        IngestClient ingestClient = IngestClientFactory.createClient(PerfKpiHelper.getConnectionStringBuilder());
         IngestionProperties ingestionProperties = new IngestionProperties(databaseName, ADX_PERF_TABLE);
         ingestionProperties.setDataFormat(IngestionProperties.DataFormat.CSV);
         StreamSourceInfo sourceInfo = new StreamSourceInfo(ingestQueryStream);
@@ -335,12 +341,10 @@ public class PerfKpiService {
                 "| project avg_PERF01, avg_PERF02, avg_PERF02E, avg_PERF03, avg_PERF04, avg_PERF05, avg_PERF06",
                 startDate, endDate, System.getenv("ADX_PERF_TABLE")
         );
-
-        // Create connection
+  
         ConnectionStringBuilder csb = PerfKpiHelper.getConnectionStringBuilder();
         Client client = ClientFactory.createClient(csb);
 
-        // Execute query
         KustoOperationResult result = client.execute(System.getenv("ADX_DATABASE_NAME"), query);
         KustoResultSetTable resultSet = result.getPrimaryResults();
         if (resultSet.next()) {
@@ -410,15 +414,15 @@ public class PerfKpiService {
         context.getLogger().severe(String.format("PerKpiAggregator - sending data to evh: %s", message));
 
         try {
+            String fullyQualifiedNamespace = System.getenv("EVENT_HUB_NAMESPACE");
+            String eventHubName = System.getenv("EVENT_HUB_NAME");
 
-            if (EVENT_HUB_NAMESPACE == null || EVENT_HUB_NAME == null || EVENT_HUB_KEY_NAME == null || EVENT_HUB_KEY == null) {
-                throw new IllegalArgumentException("Environment variables EVENT_HUB_NAMESPACE, EVENT_HUB_NAME, EVENT_HUB_KEY_NAME, or EVENT_HUB_KEY are not set.");
+            if (fullyQualifiedNamespace == null || eventHubName == null) {
+                throw new IllegalArgumentException("Environment variables EVENT_HUB_NAMESPACE or EVENT_HUB_NAME are not set.");
             }
 
-            // Creating producer client
-            AzureNamedKeyCredential credential = new AzureNamedKeyCredential(EVENT_HUB_KEY_NAME, EVENT_HUB_KEY);
             EventHubProducerClient producer = new EventHubClientBuilder()
-                .credential(EVENT_HUB_NAMESPACE, EVENT_HUB_NAME, credential)
+                .credential(fullyQualifiedNamespace, eventHubName, new DefaultAzureCredentialBuilder().build())
                 .buildProducerClient();
 
             // Create a batch to send the message
@@ -426,18 +430,16 @@ public class PerfKpiService {
             EventData eventData = new EventData(message);
 
             if (!batch.tryAdd(eventData)) {
-                throw new IllegalStateException("sendToEventHub - Event data is too large to fit in the batch.");
+                throw new IllegalStateException("Event data is too large to fit in the batch.");
             }
 
-            // Send data to evh
             producer.send(batch);
-            context.getLogger().info("sendToEventHub - Data successfully sent to Event Hub.");
+            context.getLogger().info("Data successfully sent to Event Hub.");
 
         } catch (Exception e) {
-            context.getLogger().severe(String.format("sendToEventHub - Error while sending data to Event Hub: %s", e.getMessage()));
+            context.getLogger().severe(String.format("Error while sending data to Event Hub: %s", e.getMessage()));
             throw e;
         }
 
     }
-
 }

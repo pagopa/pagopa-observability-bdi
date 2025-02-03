@@ -1,32 +1,35 @@
 package it.gov.pagopa.observability.helper;
 
+import com.azure.core.credential.TokenRequestContext;
+import com.azure.identity.AzureCliCredentialBuilder;
 import com.azure.identity.DefaultAzureCredentialBuilder;
 import com.azure.security.keyvault.secrets.SecretClient;
 import com.azure.security.keyvault.secrets.SecretClientBuilder;
 import com.microsoft.azure.kusto.data.auth.ConnectionStringBuilder;
 
+import java.util.Optional;
+
 public class PerfKpiHelper {
 
     public static ConnectionStringBuilder getConnectionStringBuilder() throws Exception {
+        String environment = Optional.ofNullable(System.getenv("ENVIRONMENT")).orElse("Azure");
+        String clusterUrl = System.getenv("ADX_CLUSTER_URL");
 
-        final String ADX_CLUSTER_URL = System.getenv( "ADX_CLUSTER_URL");
-        final String AZURE_AD_CLIENT_ID = System.getenv( "AZURE_AD_CLIENT_ID");
-        final String AZURE_AD_CLIENT_SECRET = System.getenv( "AZURE_AD_CLIENT_SECRET");
-        final String AZURE_AD_TENANT_ID = System.getenv( "AZURE_AD_TENANT_ID");
-
-        if (ADX_CLUSTER_URL == null || AZURE_AD_CLIENT_ID == null || AZURE_AD_CLIENT_SECRET == null || AZURE_AD_TENANT_ID == null) {
-            throw new IllegalArgumentException("Environment variables for Azure Data Explorer credentials are not set.");
+        if ("Local".equalsIgnoreCase(environment)) {
+            // Usa Azure CLI
+            var azureCliCredential = new AzureCliCredentialBuilder().build();
+            String accessToken = azureCliCredential.getToken(new TokenRequestContext()
+                    .addScopes(clusterUrl + "/.default"))
+                    .block().getToken();
+            return ConnectionStringBuilder.createWithAadAccessTokenAuthentication(clusterUrl, accessToken);
+        } else {
+            // Managed Identity
+            var managedIdentityCredential = new DefaultAzureCredentialBuilder().build();
+            String accessToken = managedIdentityCredential.getToken(new TokenRequestContext()
+                    .addScopes(clusterUrl + "/.default"))
+                    .block().getToken();
+            return ConnectionStringBuilder.createWithAadAccessTokenAuthentication(clusterUrl, accessToken);
         }
-    
-        // Create connection string using Application ID & Secret
-        ConnectionStringBuilder csb = ConnectionStringBuilder.createWithAadApplicationCredentials(
-            ADX_CLUSTER_URL,
-            AZURE_AD_CLIENT_ID,
-            AZURE_AD_CLIENT_SECRET,
-            AZURE_AD_TENANT_ID
-        );
-
-        return csb;
     }
 
     public static String getKVSecret(String secretName) {
