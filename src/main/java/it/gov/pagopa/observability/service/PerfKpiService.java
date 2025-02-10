@@ -1,5 +1,18 @@
 package it.gov.pagopa.observability.service;
 
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URL;
+import java.net.http.HttpClient;
+import java.nio.charset.StandardCharsets;
+import java.text.DecimalFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 import com.azure.core.credential.AzureNamedKeyCredential;
 import com.azure.messaging.eventhubs.EventData;
 import com.azure.messaging.eventhubs.EventDataBatch;
@@ -17,43 +30,36 @@ import com.microsoft.azure.kusto.ingest.IngestClient;
 import com.microsoft.azure.kusto.ingest.IngestClientFactory;
 import com.microsoft.azure.kusto.ingest.IngestionProperties;
 import com.microsoft.azure.kusto.ingest.source.StreamSourceInfo;
-import it.gov.pagopa.observability.helper.PerfKpiHelper;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URI;
-import java.net.URL;
-import java.net.http.HttpClient;
-import java.nio.charset.StandardCharsets;
-import java.text.DecimalFormat;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import it.gov.pagopa.observability.helper.PerfKpiHelper;
 
 public class PerfKpiService {
 
-    private static PerfKpiService instance;
+    private String ADX_DB_NAME;
+    private String ADX_SOURCE_TABLE;
+    private String ADX_PERF_TABLE;
+    private String APP_INSIGHTS_API_URL;
+    private String BETTERSTACK_API_URL;
+    private String BETTERSTACK_API_KEY;
+    private String APP_INSIGHTS_API_KEY;
+    private String CLOUD_ROLE_NAME;
+    private String EVENT_HUB_NAME;
+    private String EVENT_HUB_NAMESPACE;
+    private String EVENT_HUB_KEY_NAME;
+    private String EVENT_HUB_KEY;
 
-    private final String databaseName;
-    private final String ADX_SOURCE_TABLE;
-    private final String ADX_PERF_TABLE;
-    private final String APP_INSIGHTS_API_URL;
-    private final String BETTERSTACK_API_URL;
-    private final String BETTERSTACK_API_KEY;
-    private final String APP_INSIGHTS_API_KEY;
-    private final String CLOUD_ROLE_NAME;
-    private final String EVENT_HUB_NAME;
-    private final String EVENT_HUB_NAMESPACE;
-    private final String EVENT_HUB_KEY_NAME;
-    private final String EVENT_HUB_KEY;
-    private final ExecutionContext CONTEXT;
+    public PerfKpiService() {
 
-
-    private PerfKpiService(ExecutionContext context) {
         
-        this.databaseName = System.getenv("ADX_DATABASE_NAME");
+        this.ADX_DB_NAME = System.getenv("ADX_DATABASE_NAME");
+    
+        if (this.ADX_DB_NAME == null || this.ADX_DB_NAME.isEmpty()) {
+            this.ADX_DB_NAME = System.getProperty("ADX_DATABASE_NAME", "default_test_db"); // Usa System Property nei test
+        }
+    
+        if (this.ADX_DB_NAME.equals("default_test_db")) {
+            System.out.println("⚠️ PerfKpiService - ADX_DATABASE_NAME impostato con un valore di test.");
+        }
         this.ADX_SOURCE_TABLE = System.getenv("ADX_SOURCE_TABLE");
         this.ADX_PERF_TABLE = System.getenv("ADX_PERF_TABLE");
         this.APP_INSIGHTS_API_URL = System.getenv("APP_INSIGHTS_API_URL");
@@ -65,22 +71,20 @@ public class PerfKpiService {
         this.EVENT_HUB_NAMESPACE = System.getenv("EVENT_HUB_NAMESPACE");
         this.EVENT_HUB_KEY_NAME = System.getenv("EVENT_HUB_KEY_NAME");
         this.EVENT_HUB_KEY = System.getenv("EVENT_HUB_KEY");
-        this.CONTEXT = context;
-
-
-        context.getLogger().info(String.format("|GetPerformanceKpiService|Database Name[%s] Source table[%s] Destination table[%s]", 
-            databaseName, ADX_SOURCE_TABLE, ADX_PERF_TABLE));
     }
 
-    public static synchronized PerfKpiService getInstance(ExecutionContext context) {
-        if (instance == null) {
-            instance = new PerfKpiService(context);
-        }
-        return instance;
-    } 
+    /**
+     * Computes PERF-02 kpi (Number of messages managed by the platform)
+     * Performs a query on ADX ReEvent DB 
+     * @param startDate date from in the query
+     * @param endDate date end in the query
+     * @param context Azure function context
+     * @return the number of total messages
+     * @throws Exception
+     */
+    public int executePerf02Kpi(LocalDateTime startDate, LocalDateTime endDate, ExecutionContext context) throws Exception {
 
-    public int executePerf02Kpi(LocalDateTime startDate, LocalDateTime endDate) throws Exception {
-
+        
         String perf02Query = String.format(
             "let start = datetime(%s); " +
             "let end = datetime(%s); " +
@@ -91,13 +95,9 @@ public class PerfKpiService {
             "| project count",
             startDate, endDate, ADX_SOURCE_TABLE
         );
-    
-        // Create connection and client
         ConnectionStringBuilder csb = PerfKpiHelper.getConnectionStringBuilder();
         Client kustoClient = ClientFactory.createClient(csb);
-    
-        // Execute the query
-        KustoOperationResult result = kustoClient.execute(databaseName, perf02Query);
+        KustoOperationResult result = kustoClient.execute(ADX_DB_NAME, perf02Query);
         int count = 0;
         KustoResultSetTable resultSet = null;
         if (result.hasNext()) {
@@ -106,19 +106,29 @@ public class PerfKpiService {
                 count = resultSet.getInt("count");
             }
         }
-    
-        CONTEXT.getLogger().info(String.format("PerformanceKpiService - " +
+
+        context.getLogger().info(String.format("executePerf02Kpi - " +
                 "PERF-02 Query Result[%s] startDate[%s] endDate[%s]", count, startDate, endDate));
-    
-        // Insert the result into the destination table
-        writePerfKpiData(databaseName, ADX_PERF_TABLE, startDate, endDate, "PERF-02", Integer.toString(count));
-        CONTEXT.getLogger().info(String.format("PerformanceKpiService - PERF-02 Query Result[%s] startDate[%s] endDate[%s]", count, startDate, endDate));
-    
+
+        // insert the result into the destination table
+        if (System.getProperty("ENV") != null && !"TEST".equalsIgnoreCase(System.getProperty("ENV"))) {
+            writePerfKpiData(startDate, endDate, "PERF-02", Integer.toString(count), context);
+        }
+
         return count;
     }
-    
 
-    public int executePerf02EKpi(LocalDateTime startDate, LocalDateTime endDate) throws Exception {
+    /**
+     * Computes PERF-02E kpi (Number of messages in error managed by the platform)
+     * Performs a query on ADX ReEvent DB
+     * WARNING - the adx query is very heavy, the date rage has to be short (max 2 hours)
+     * @param startDate date from in the query
+     * @param endDate date to in the query
+     * @param context Azure function context
+     * @return toal number of messages in error
+     * @throws Exception
+     */
+    public int executePerf02EKpi(LocalDateTime startDate, LocalDateTime endDate, ExecutionContext context) throws Exception {
 
         String perf0E2Query = String.format(
             "let start = datetime(%s);" + 
@@ -141,7 +151,7 @@ public class PerfKpiService {
         Client kustoClient = ClientFactory.createClient(csb);
 
         // Execute query
-        KustoOperationResult result = kustoClient.execute(databaseName, perf0E2Query);
+        KustoOperationResult result = kustoClient.execute(ADX_DB_NAME, perf0E2Query);
         int count = 0;
         KustoResultSetTable resultSet = null;
         if (result.hasNext()) {
@@ -150,21 +160,37 @@ public class PerfKpiService {
                 count = resultSet.getInt("count");
             }
         }
-        CONTEXT.getLogger().info(String.format("PerformanceKpiService - PERF-02E Query Result[%s] startDate[%s] endDate[%s]", count, startDate, endDate));
 
-        writePerfKpiData(databaseName, ADX_PERF_TABLE, startDate, endDate, "PERF-02E", Integer.toString(count));
+        context.getLogger().info(String.format("executePerf02EKpi - PERF-02E Query Result[%s] startDate[%s] endDate[%s]", count, startDate, endDate));
 
+        writePerfKpiData(startDate, endDate, "PERF-02E", Integer.toString(count), context);
         return count;
     }
 
-    public double executePerfKpi(LocalDateTime startDate, LocalDateTime endDate, String kpiId) throws Exception {
+    /**
+     * Computes the response time of some NDP primitives (PERF-03, PERF-04, PERF-05 e PERF-06)
+     * by execution of a app insights query
+     * @param startDate date from in the query
+     * @param endDate date to in the query
+     * @param kpiId kpiId to calculate
+     * @param context Azure function context
+     * @return
+     * @throws Exception
+     */
+    public double executePerfKpi(LocalDateTime startDate, LocalDateTime endDate, String kpiId, ExecutionContext context) throws Exception {
 
         try {
 
-            CONTEXT.getLogger().info(String.format("PerformanceKpiService - %s calculating KPI for period: %s to %s", kpiId, startDate, endDate));
-            
+            context.getLogger().info(String.format("executePerfKpi - %s calculating KPI for period: %s to %s", kpiId, startDate, endDate));
+
+            APP_INSIGHTS_API_KEY = (APP_INSIGHTS_API_KEY == null) ? System.getProperty("APP_INSIGHTS_API_KEY") : APP_INSIGHTS_API_KEY; 
             if (APP_INSIGHTS_API_KEY == null) {
                 throw new IllegalStateException("The environment variable APP_INSIGHTS_API_KEY is not configured");
+            }
+
+            APP_INSIGHTS_API_URL = (APP_INSIGHTS_API_URL == null) ? System.getProperty("APP_INSIGHTS_API_URL") : APP_INSIGHTS_API_URL; 
+            if (APP_INSIGHTS_API_URL == null) {
+                throw new IllegalStateException("The environment variable APP_INSIGHTS_API_URL is not configured");
             }
 
             // Query Application Insights
@@ -174,8 +200,9 @@ public class PerfKpiService {
                     + "| where cloud_RoleName == '%s' "
                     //+ "| where name in ('POST /nodo-auth/node-for-psp/v1', 'POST /nodo-auth/node-for-psp/V1/') "
                     + "| where operation_Name == '%s' "
-                    + "| summarize avg = avg(duration)"
-                    + "| project avg",
+                    + "| summarize avg_duration = avg(duration) "
+                    + "| extend avg_duration = iff(isnan(avg_duration), 0.0, avg_duration)"
+                    + "| project avg_duration" ,
                 startDate.toString(), endDate.toString(), CLOUD_ROLE_NAME, operationName
             );
             String payload = String.format("{\"query\": \"%s\"}", query);
@@ -195,7 +222,7 @@ public class PerfKpiService {
 
             // Read response
             if (conn.getResponseCode() != 200) {
-                throw new RuntimeException("PerformanceKpiService - Errore durante la chiamata ad Application Insights: " + conn.getResponseCode());
+                throw new RuntimeException(String.format("executePerfKpi - %s Error during Application Insights invocation: %s", kpiId, conn.getResponseCode()));
             }
 
             StringBuilder response = new StringBuilder();
@@ -210,17 +237,26 @@ public class PerfKpiService {
             // parse appinsight json response
             String avgDuration = parseAppInsightsResponse(response.toString());
 
-            writePerfKpiData(databaseName, ADX_PERF_TABLE, startDate, endDate, kpiId, avgDuration);
-            CONTEXT.getLogger().info("PerformanceKpiService - KPI record successfully inserted into Azure Data Explorer Table");
+            if (System.getProperty("ENV") != null && !"TEST".equalsIgnoreCase(System.getProperty("ENV"))) {
+                writePerfKpiData(startDate, endDate, kpiId, avgDuration, context);
+            }
+
+            context.getLogger().info(String.format("PerformanceKpiService - %s record successfully inserted into ADX, average[%s]", kpiId, avgDuration));
 
             return Double.valueOf(avgDuration);
 
         } catch (Exception e) {
-            CONTEXT.getLogger().severe(String.format("PerformanceKpiService - %s Error executing KPI calculation: %s", kpiId, e.getMessage()));
+            context.getLogger().severe(String.format("PerformanceKpiService - %s Error executing KPI calculation: %s", kpiId, e.getMessage()));
+            e.printStackTrace();
             throw e;
         }
     }
 
+    /**
+     * Utility method that parse the AI response and return the result as string
+     * @param response response to parse
+     * @return
+     */
     private String parseAppInsightsResponse(String response) {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
@@ -241,52 +277,74 @@ public class PerfKpiService {
             }
             return "0";
         } catch (Exception e) {
-            throw new RuntimeException("Error while parsing JSON response from AppInsight", e);
+            throw new RuntimeException("parseAppInsightsResponse - Error while parsing JSON response from AppInsight", e);
         }
     }
-    
-    public void executePerf01Kpi(LocalDateTime startDate, LocalDateTime endDate) throws Exception {
+
+    /**
+     * Computes the PERF-01 kpi by making a call to betterstack api (status page) in order
+     * to retrieve the availability of NDP
+     * @param startDate date from
+     * @param endDate date to
+     * @param context Azure function context
+     * @throws Exception
+     */
+    public void executePerf01Kpi(LocalDateTime startDate, LocalDateTime endDate, ExecutionContext context) throws Exception {
 
         DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-
+        
         String fromDate = startDate.format(FORMATTER);
         String toDate = endDate.format(FORMATTER);
-
+        
+        context.getLogger().info(String.format("executePerf01Kpi - Invoking status page api startDate[%s] endDate[%s]", fromDate, toDate));
+        
         // Building api url and http request
         String url = String.format("%s?from=%s&to=%s", BETTERSTACK_API_URL, fromDate, toDate);
         HttpClient client = HttpClient.newHttpClient();
         java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
-            .uri(URI.create(url))
-            .header("Authorization", "Bearer " + BETTERSTACK_API_KEY)
-            .GET()
-            .build();
-
+        .uri(URI.create(url))
+        .header("Authorization", "Bearer " + BETTERSTACK_API_KEY)
+        .GET()
+        .build();
+        
         // Calliing api
         java.net.http.HttpResponse<String> response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
-
+        
         if (response.statusCode() == 200) {
             // Parse json response
             ObjectMapper objectMapper = new ObjectMapper();
             JsonNode rootNode = objectMapper.readTree(response.body());
             String availabilty = rootNode.path("data")
-                           .path("attributes")
-                           .path("availability")
-                           .asText();
+            .path("attributes")
+            .path("availability")
+            .asText();
             
-            // write kpi to db
-            writePerfKpiData(databaseName, ADX_PERF_TABLE, startDate, endDate, "PERF-01", availabilty);
+            context.getLogger().info(String.format("executePerf01Kpi - PERF-01 writing the kpi on ADX, availability[%s]", availabilty));
 
+            // write kpi to db
+            writePerfKpiData(startDate, endDate, "PERF-01", availabilty, context);
+            
         } else {
-            throw new RuntimeException(String.format("PerformanceKpiService - %s Error executing KPI calculation: %s - %s",
+            throw new RuntimeException(String.format("executePerf01Kpi - %s Error executing KPI calculation: %s - %s",
             "PERF-01", response.statusCode(), response.body()));
         }
-    }    
+    }   
 
-    private void writePerfKpiData(String databaseName, 
-                                    String tableName, 
-                                    LocalDateTime startDate, 
+    /**
+     * Utility method that save the computed kpis on ADX inside the custom table
+     * @param databaseName db name (es. re)
+     * @param tableName table name
+     * @param startDate date from
+     * @param endDate date to
+     * @param kpiName kpi to save
+     * @param kpiValue kpi value
+     * @param context Azure function context
+     * @throws Exception
+     */
+    public void writePerfKpiData(LocalDateTime startDate, 
                                     LocalDateTime endDate, 
-                                    String kpiName, String kpiValue) throws Exception{
+                                    String kpiName, 
+                                    String kpiValue, ExecutionContext context) throws Exception{
 
         // formatting date
         LocalDateTime now = LocalDateTime.now();
@@ -301,23 +359,37 @@ public class PerfKpiService {
             kpiName,
             kpiValue
         );
-        
+
         // Create connection string using Application ID & Secret
         ConnectionStringBuilder csb = PerfKpiHelper.getConnectionStringBuilder();
-            
+
+        if (csb == null || csb.getClusterUrl() == null) {
+            throw new IllegalStateException("Cluster URL is null! Ensure environment variables are set correctly.");
+        }
+        
         // prepare ingestion
         ByteArrayInputStream ingestQueryStream = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
         IngestClient ingestClient = IngestClientFactory.createClient(csb);
-        IngestionProperties ingestionProperties = new IngestionProperties(databaseName, ADX_PERF_TABLE);
+        IngestionProperties ingestionProperties = new IngestionProperties(ADX_DB_NAME, ADX_PERF_TABLE);
         ingestionProperties.setDataFormat(IngestionProperties.DataFormat.CSV);
         StreamSourceInfo sourceInfo = new StreamSourceInfo(ingestQueryStream);
 
         // execute ingestion
         ingestClient.ingestFromStream(sourceInfo, ingestionProperties);
         ingestClient.close();
-        CONTEXT.getLogger().info(String.format("PerformanceKpiService - %s Data successfully inserted into[%s]", kpiName, ADX_PERF_TABLE));
+
+        context.getLogger().info(String.format("writePerfKpiData - %s Data successfully inserted into[%s]", kpiName, ADX_PERF_TABLE));
     }
 
+    /**
+     * Perform the query on ADX custom table in order to compute the comma separated string
+     * to send to data lake
+     * @param startDate date from
+     * @param endDate date to
+     * @param context azure function context
+     * @return
+     * @throws Exception
+     */
     public String queryKpiAverages(LocalDateTime startDate, LocalDateTime endDate, ExecutionContext context) throws Exception {
         String query = String.format(
                 "let start = datetime('%s');" +
@@ -335,13 +407,13 @@ public class PerfKpiService {
                 "| project avg_PERF01, avg_PERF02, avg_PERF02E, avg_PERF03, avg_PERF04, avg_PERF05, avg_PERF06",
                 startDate, endDate, System.getenv("ADX_PERF_TABLE")
         );
-
-        // Create connection
+        
+        context.getLogger().info(String.format("queryKpiAverages - invoking app insigths query"));
+        
         ConnectionStringBuilder csb = PerfKpiHelper.getConnectionStringBuilder();
         Client client = ClientFactory.createClient(csb);
-
-        // Execute query
-        KustoOperationResult result = client.execute(System.getenv("ADX_DATABASE_NAME"), query);
+        
+        KustoOperationResult result = client.execute(ADX_DB_NAME, query);
         KustoResultSetTable resultSet = result.getPrimaryResults();
         if (resultSet.next()) {
             String avg_PERF01 = "100.00";
@@ -351,68 +423,51 @@ public class PerfKpiService {
                 DecimalFormat df = new DecimalFormat("#.00");
                 avg_PERF01 = df.format(perf01d);
             } catch (Exception e) {
-                context.getLogger().severe(String.format("PerKpiAggregator - error while getting avg_PERF01 from resultset: %s",
-                e.getMessage()));
+                context.getLogger().severe(String.format("queryKpiAverages - error while getting avg_PERF01 from resultset: %s", e.getMessage()));
             }
             String avg_PERF02 = "0"; 
+            String avg_PERF02E = "0"; 
+            String avg_PERF03 = "0"; 
+            String avg_PERF04 = "0"; 
+            String avg_PERF05 = "0"; 
+            String avg_PERF06 = "0"; 
+            
             try {
                 avg_PERF02 = resultSet.getString("avg_PERF02");
-            } catch (Exception e) {
-                context.getLogger().severe(String.format("PerKpiAggregator - error while getting avg_PERF02 from resultset: %s",
-                e.getMessage()));
-            }
-            String avg_PERF02E = "0"; 
-            try {
                 avg_PERF02E = resultSet.getString("avg_PERF02E");
-            } catch (Exception e) {
-                context.getLogger().severe(String.format("PerKpiAggregator - error while getting avg_PERF02E from resultset: %s",
-                e.getMessage()));
-            }
-            String avg_PERF03 = "0"; 
-            try {
                 avg_PERF03 = resultSet.getString("avg_PERF03");
-            } catch (Exception e) {
-                context.getLogger().severe(String.format("PerKpiAggregator - error while getting avg_PERF03 from resultset: %s",
-                e.getMessage()));
-            }
-            String avg_PERF04 = "0"; 
-            try {
                 avg_PERF04 = resultSet.getString("avg_PERF04");
-            } catch (Exception e) {
-                context.getLogger().severe(String.format("PerKpiAggregator - error while getting avg_PERF04 from resultset: %s",
-                e.getMessage()));
-            }
-            String avg_PERF05 = "0"; 
-            try {
                 avg_PERF05 = resultSet.getString("avg_PERF05");
-            } catch (Exception e) {
-                context.getLogger().severe(String.format("PerKpiAggregator - error while getting avg_PERF05 from resultset: %s",
-                e.getMessage()));
-            }
-            String avg_PERF06 = "0"; 
-            try {
                 avg_PERF06 = resultSet.getString("avg_PERF06");
             } catch (Exception e) {
-                context.getLogger().severe(String.format("PerKpiAggregator - error while getting avg_PERF06 from resultset: %s",
-                e.getMessage()));
+                context.getLogger().severe(String.format("queryKpiAverages - error while getting kpi from resultset: %s", e.getMessage()));
             }
-
+            
+            context.getLogger().severe(String.format("queryKpiAverages - kpi averages computed"));
+            
             return String.format("%s,%s,%s,%s,%s,%s,%s",
-                    avg_PERF01, avg_PERF02, avg_PERF02E, avg_PERF03, avg_PERF04, avg_PERF05, avg_PERF06);
+            avg_PERF01, avg_PERF02, avg_PERF02E, avg_PERF03, avg_PERF04, avg_PERF05, avg_PERF06);
+            
         } else {
-            context.getLogger().warning("No data found for query.");
+            context.getLogger().severe(String.format("queryKpiAverages - the query produced no result, returning the default value"));
             return "0.0,0.0,0.0,0.0,0.0,0.0,0.0"; // Default values
         }
     }
 
+    /**
+     * Send kpi message to evh
+     * @param message message to send
+     * @param context Azure function context
+     * @throws Exception
+     */
     public void sendToEventHub(String message, ExecutionContext context) throws Exception {
 
-        context.getLogger().severe(String.format("PerKpiAggregator - sending data to evh: %s", message));
+        context.getLogger().severe(String.format("sendToEventHub - sending data to evh: %s", message));
 
         try {
 
             if (EVENT_HUB_NAMESPACE == null || EVENT_HUB_NAME == null || EVENT_HUB_KEY_NAME == null || EVENT_HUB_KEY == null) {
-                throw new IllegalArgumentException("Environment variables EVENT_HUB_NAMESPACE, EVENT_HUB_NAME, EVENT_HUB_KEY_NAME, or EVENT_HUB_KEY are not set.");
+                throw new IllegalArgumentException(" sendToEventHub - Environment variables EVENT_HUB_NAMESPACE, EVENT_HUB_NAME, EVENT_HUB_KEY_NAME, or EVENT_HUB_KEY are not set.");
             }
 
             // Creating producer client
@@ -431,7 +486,7 @@ public class PerfKpiService {
 
             // Send data to evh
             producer.send(batch);
-            context.getLogger().info("sendToEventHub - Data successfully sent to Event Hub.");
+            context.getLogger().info("sendToEventHub - Data successfully sent to Event Hub");
 
         } catch (Exception e) {
             context.getLogger().severe(String.format("sendToEventHub - Error while sending data to Event Hub: %s", e.getMessage()));
@@ -439,5 +494,4 @@ public class PerfKpiService {
         }
 
     }
-
 }

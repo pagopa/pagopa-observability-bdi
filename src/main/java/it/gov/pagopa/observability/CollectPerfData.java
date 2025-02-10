@@ -22,85 +22,92 @@ public class CollectPerfData {
 
     @FunctionName("CollectPerfData")
     public HttpResponseMessage httpTrigger(
-        @HttpTrigger(name = "req", methods = {HttpMethod.POST, HttpMethod.GET}, 
-            authLevel = AuthorizationLevel.FUNCTION, route = "perfData")
-        HttpRequestMessage<Optional<String>> request,
-        final ExecutionContext context) {
+                @HttpTrigger(name = "req", methods = {HttpMethod.POST, HttpMethod.GET}, 
+                    authLevel = AuthorizationLevel.FUNCTION, route = "perfData")
+                HttpRequestMessage<Optional<String>> request,
+                final ExecutionContext context) {
 
+        context.getLogger().info(String.format("CollectPerfData - HTTP triggered, processing input parameters"));
+
+        // get query parameters
         String startDateInput = request.getQueryParameters().get("startDate");
         String endDateInput = request.getQueryParameters().get("endDate");
         String kpiId = Optional.ofNullable(request.getQueryParameters().get("kpiId")).orElse("ALL_KPI");
 
         try {
-            // Date management
+            
+            // if start date and end date have been specified, that interval is taken into account,
+            // otherwise the kpis are calculated about the previous month
             LocalDateTime startDate;
             LocalDateTime endDate;
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-            if (kpiId.equalsIgnoreCase("PERF-02E")) {
+            if (startDateInput != null && endDateInput != null) {
 
-                // if startDate is not specified then startDate is now minus one hour
-                if (startDateInput != null && !startDateInput.isEmpty()) {
-                    startDate = LocalDateTime.parse(startDateInput, formatter);
-                } else {
-                    startDate = LocalDateTime.now().minusHours(1).withMinute(0).withSecond(0);
-                }
-                endDate = startDate.plusHours(1);
-                context.getLogger().info(String.format("CollectPerf02EData - PERF-02E HTTP triggered. " +
-                        "Processing interval: %s to %s", startDate, endDate));
+                startDate = LocalDateTime.parse(startDateInput, formatter);
+                endDate = LocalDateTime.parse(endDateInput, formatter);
 
-            } else { // other kpis management
-
-                if (startDateInput != null && endDateInput != null) {
-                    startDate = LocalDateTime.parse(startDateInput, formatter);
-                    endDate = LocalDateTime.parse(endDateInput, formatter);
-                } else { // by default the previous month is taken into account
-                    startDate = LocalDateTime.now()
-                        .minusMonths(1)
-                        .withDayOfMonth(1)
-                        .withHour(0)
-                        .withMinute(0)
-                        .withSecond(0);
-                    endDate = startDate.plusMonths(1).minusSeconds(1);
-                }
+            } else { // by default the previous month is taken into account
+                
+                startDate = LocalDateTime.now()
+                    .minusMonths(1)
+                    .withDayOfMonth(1)
+                    .withHour(0)
+                    .withMinute(0)
+                    .withSecond(0);
+                endDate = startDate.plusMonths(1).minusSeconds(1);
             }
 
-            context.getLogger().info(String.format("CollectPerfData - HTTP triggered. " +
-                    "Processing interval: %s to %s", startDate, endDate));
-            PerfKpiService service = PerfKpiService.getInstance(context);
+            context.getLogger().info(String.format("CollectPerfData - Processing interval: %s to %s, kpiId: %s", startDate, endDate, kpiId));
+            
+            // getting service instance        
+            PerfKpiService service = new PerfKpiService();
+
+            // if no kpiId has been specified, all kpis wil be collected
             switch (kpiId) {
                 case "PERF-01":
-                    service.executePerf01Kpi(startDate, endDate);
+                    service.executePerf01Kpi(startDate, endDate, context);
                     break;
                 case "PERF-02":
-                    service.executePerf02Kpi(startDate, endDate);
+                    service.executePerf02Kpi(startDate, endDate, context);
                     break;
                 case "PERF-02E":
-                    service.executePerf02EKpi(startDate, endDate);
+                    // if startDate is not specified then startDate is now minus one hour
+                    if (startDateInput != null && !startDateInput.isEmpty()) {
+                        startDate = LocalDateTime.parse(startDateInput, formatter);
+                    } else {
+                        startDate = LocalDateTime.now().minusHours(1).withMinute(0).withSecond(0);
+                    }
+                    endDate = startDate.plusHours(1);
+                    context.getLogger().info(String.format("CollectPerf02EData - PERF-02E HTTP triggered. " +
+                        "Processing interval: %s to %s", startDate, endDate));                
+                    service.executePerf02EKpi(startDate, endDate, context);
                     break;
                 case "PERF-03":
-                    service.executePerfKpi(startDate, endDate, "PERF-03");
+                    service.executePerfKpi(startDate, endDate, "PERF-03", context);
                     break;
                 case "PERF-04":
-                    service.executePerfKpi(startDate, endDate, "PERF-04");
+                    service.executePerfKpi(startDate, endDate, "PERF-04", context);
                     break;
                 case "PERF-05":
-                    service.executePerfKpi(startDate, endDate, "PERF-05");
+                    service.executePerfKpi(startDate, endDate, "PERF-05", context);
                     break;
                 case "PERF-06":
-                    service.executePerfKpi(startDate, endDate, "PERF-06");
+                    service.executePerfKpi(startDate, endDate, "PERF-06", context);
                     break;
                 default: // collect all kpis
-                    service.executePerf01Kpi(startDate, endDate);
-                    service.executePerf02Kpi(startDate, endDate);
-                    service.executePerf02EKpi(startDate, endDate);
-                    service.executePerfKpi(startDate, endDate, "PERF-03");
-                    service.executePerfKpi(startDate, endDate, "PERF-04");
-                    service.executePerfKpi(startDate, endDate, "PERF-05");
-                    service.executePerfKpi(startDate, endDate, "PERF-06");
+                    service.executePerf01Kpi(startDate, endDate, context);
+                    service.executePerf02Kpi(startDate, endDate, context);
+                    service.executePerf02EKpi(startDate, endDate, context);
+                    service.executePerfKpi(startDate, endDate, "PERF-03", context);
+                    service.executePerfKpi(startDate, endDate, "PERF-04", context);
+                    service.executePerfKpi(startDate, endDate, "PERF-05", context);
+                    service.executePerfKpi(startDate, endDate, "PERF-06", context);
                     break;
             }
             
             // Build OK response
+            context.getLogger().info(String.format("CollectPerfData - Execution completed"));
+
             ObjectMapper objectMapper = new ObjectMapper();
             ObjectNode rootNode = objectMapper.createObjectNode();
             rootNode.put("status", String.valueOf(HttpStatus.OK));
@@ -114,7 +121,7 @@ public class CollectPerfData {
 
         } catch (Exception e) {
 
-            context.getLogger().severe(String.format("CollectPerformanceData - HTTP triggered. " +
+            context.getLogger().severe(String.format("CollectPerfData - HTTP triggered. " +
                     "Error: %s", e.getMessage()));
 
             // Build KO response
@@ -123,6 +130,7 @@ public class CollectPerfData {
             rootNode.put("status", String.valueOf(HttpStatus.INTERNAL_SERVER_ERROR));
             rootNode.put("message", String.format("CollectPerformanceData - HTTP triggered. Error: %s", e.getMessage()));
             rootNode.put("details", String.format("CollectPerfData - Error: %s ", e.getMessage()));
+
             try {
                 String responseBody = objectMapper.writeValueAsString(rootNode);
                 return request.createResponseBuilder(HttpStatus.INTERNAL_SERVER_ERROR)

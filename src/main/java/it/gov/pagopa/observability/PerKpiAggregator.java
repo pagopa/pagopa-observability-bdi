@@ -26,17 +26,21 @@ public class PerKpiAggregator {
 
     @FunctionName("PerKpiAggregator")
     public HttpResponseMessage httpTrigger(
-        @HttpTrigger(name = "req", methods = {HttpMethod.POST, HttpMethod.GET}, 
-            authLevel = AuthorizationLevel.FUNCTION, route = "quarter/{quarter}")
-        HttpRequestMessage<Optional<String>> request,
-        @BindingName("quarter") String quarter, 
-        final ExecutionContext context) {
+            @HttpTrigger(name = "req", methods = {HttpMethod.POST, HttpMethod.GET}, 
+                authLevel = AuthorizationLevel.FUNCTION, route = "quarter/{quarter}")
+            HttpRequestMessage<Optional<String>> request,
+            @BindingName("quarter") String quarter, 
+            final ExecutionContext context) {
 
+        context.getLogger().info(String.format("PerKpiAggregator - HTTP triggered, processing input parameters"));
+        
+        // if year query param is not specified, the current year is taken into account
         String year = request.getQueryParameters().get("year");
         if (year == null || year.isEmpty()) {
             year = String.valueOf(LocalDateTime.now().getYear());
         }
 
+        // calculating the qaurter to compute
         String firstMonthString = "";
         String secondMonthString = "";
         String thirdMonthString = "";
@@ -50,7 +54,7 @@ public class PerKpiAggregator {
             LocalDateTime secondMonth;
             LocalDateTime thirdMonth;
 
-            if ("last".equalsIgnoreCase(quarter)) { // get the last quarter, year is taken into account
+            if ("last".equalsIgnoreCase(quarter)) { // get the last quarter
                 LocalDateTime now = LocalDateTime.now();
                 firstMonth = now.minusMonths(3).withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
                 secondMonth = now.minusMonths(2).withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
@@ -80,20 +84,25 @@ public class PerKpiAggregator {
                 thirdMonth = now.plusMonths((offset - 2)).withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
             }
 
-            PerfKpiService service = PerfKpiService.getInstance(context);
+            context.getLogger().info(String.format("PerKpiAggregator - Calculating kpis for quarter [%s] year [%s]", quarter, year));
+            
+            PerfKpiService service = new PerfKpiService();
             firstMonthString = service.queryKpiAverages(firstMonth, firstMonth.plusMonths(1).minusSeconds(1), context);
             secondMonthString = service.queryKpiAverages(secondMonth, secondMonth.plusMonths(1).minusSeconds(1), context);
             thirdMonthString = service.queryKpiAverages(thirdMonth, thirdMonth.plusMonths(1).minusSeconds(1), context);
-
+            
+            context.getLogger().info(String.format("PerKpiAggregator - kpis calculated"));
+            
             // building message to send to evh
             List<String> data = List.of(
                 firstMonthString,
                 secondMonthString,
                 thirdMonthString
-            );
-
+                );
+                
             // Serialize to JSON and send to evh
             String jsonString = serializeToJson(year, quarter, data);
+            context.getLogger().info(String.format("PerKpiAggregator - Sending kpis to evh"));
             service.sendToEventHub(jsonString, context);
 
             // Build OK response
@@ -108,6 +117,9 @@ public class PerKpiAggregator {
             }
             rootNode.set("data", dataArray);
             String responseBody = objectMapper.writeValueAsString(rootNode);
+
+            context.getLogger().info(String.format("PerKpiAggregator - Execution completed"));
+
             return request.createResponseBuilder(HttpStatus.OK)
                     .header("Content-Type", "application/json")
                     .body(responseBody)
