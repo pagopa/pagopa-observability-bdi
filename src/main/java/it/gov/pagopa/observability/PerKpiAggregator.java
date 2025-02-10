@@ -86,7 +86,7 @@ public class PerKpiAggregator {
 
             context.getLogger().info(String.format("PerKpiAggregator - Calculating kpis for quarter [%s] year [%s]", quarter, year));
             
-            PerfKpiService service = PerfKpiService.getInstance();
+            PerfKpiService service = new PerfKpiService();
             firstMonthString = service.queryKpiAverages(firstMonth, firstMonth.plusMonths(1).minusSeconds(1), context);
             secondMonthString = service.queryKpiAverages(secondMonth, secondMonth.plusMonths(1).minusSeconds(1), context);
             thirdMonthString = service.queryKpiAverages(thirdMonth, thirdMonth.plusMonths(1).minusSeconds(1), context);

@@ -35,24 +35,31 @@ import it.gov.pagopa.observability.helper.PerfKpiHelper;
 
 public class PerfKpiService {
 
-    private static PerfKpiService instance;
+    private String ADX_DB_NAME;
+    private String ADX_SOURCE_TABLE;
+    private String ADX_PERF_TABLE;
+    private String APP_INSIGHTS_API_URL;
+    private String BETTERSTACK_API_URL;
+    private String BETTERSTACK_API_KEY;
+    private String APP_INSIGHTS_API_KEY;
+    private String CLOUD_ROLE_NAME;
+    private String EVENT_HUB_NAME;
+    private String EVENT_HUB_NAMESPACE;
+    private String EVENT_HUB_KEY_NAME;
+    private String EVENT_HUB_KEY;
 
-    private final String ADX_DB_NAME;
-    private final String ADX_SOURCE_TABLE;
-    private final String ADX_PERF_TABLE;
-    private final String APP_INSIGHTS_API_URL;
-    private final String BETTERSTACK_API_URL;
-    private final String BETTERSTACK_API_KEY;
-    private final String APP_INSIGHTS_API_KEY;
-    private final String CLOUD_ROLE_NAME;
-    private final String EVENT_HUB_NAME;
-    private final String EVENT_HUB_NAMESPACE;
-    private final String EVENT_HUB_KEY_NAME;
-    private final String EVENT_HUB_KEY;
+    public PerfKpiService() {
 
-    private PerfKpiService() {
         
         this.ADX_DB_NAME = System.getenv("ADX_DATABASE_NAME");
+    
+        if (this.ADX_DB_NAME == null || this.ADX_DB_NAME.isEmpty()) {
+            this.ADX_DB_NAME = System.getProperty("ADX_DATABASE_NAME", "default_test_db"); // Usa System Property nei test
+        }
+    
+        if (this.ADX_DB_NAME.equals("default_test_db")) {
+            System.out.println("⚠️ PerfKpiService - ADX_DATABASE_NAME impostato con un valore di test.");
+        }
         this.ADX_SOURCE_TABLE = System.getenv("ADX_SOURCE_TABLE");
         this.ADX_PERF_TABLE = System.getenv("ADX_PERF_TABLE");
         this.APP_INSIGHTS_API_URL = System.getenv("APP_INSIGHTS_API_URL");
@@ -65,13 +72,6 @@ public class PerfKpiService {
         this.EVENT_HUB_KEY_NAME = System.getenv("EVENT_HUB_KEY_NAME");
         this.EVENT_HUB_KEY = System.getenv("EVENT_HUB_KEY");
     }
-
-    public static synchronized PerfKpiService getInstance() {
-        if (instance == null) {
-            instance = new PerfKpiService();
-        }
-        return instance;
-    } 
 
     /**
      * Computes PERF-02 kpi (Number of messages managed by the platform)
@@ -111,8 +111,10 @@ public class PerfKpiService {
                 "PERF-02 Query Result[%s] startDate[%s] endDate[%s]", count, startDate, endDate));
 
         // insert the result into the destination table
-        writePerfKpiData(startDate, endDate, "PERF-02", Integer.toString(count), context);
-        
+        if (System.getProperty("ENV") != null && !"TEST".equalsIgnoreCase(System.getProperty("ENV"))) {
+            writePerfKpiData(startDate, endDate, "PERF-02", Integer.toString(count), context);
+        }
+
         return count;
     }
 
@@ -180,9 +182,15 @@ public class PerfKpiService {
         try {
 
             context.getLogger().info(String.format("executePerfKpi - %s calculating KPI for period: %s to %s", kpiId, startDate, endDate));
-            
+
+            APP_INSIGHTS_API_KEY = (APP_INSIGHTS_API_KEY == null) ? System.getProperty("APP_INSIGHTS_API_KEY") : APP_INSIGHTS_API_KEY; 
             if (APP_INSIGHTS_API_KEY == null) {
                 throw new IllegalStateException("The environment variable APP_INSIGHTS_API_KEY is not configured");
+            }
+
+            APP_INSIGHTS_API_URL = (APP_INSIGHTS_API_URL == null) ? System.getProperty("APP_INSIGHTS_API_URL") : APP_INSIGHTS_API_URL; 
+            if (APP_INSIGHTS_API_URL == null) {
+                throw new IllegalStateException("The environment variable APP_INSIGHTS_API_URL is not configured");
             }
 
             // Query Application Insights
@@ -229,13 +237,17 @@ public class PerfKpiService {
             // parse appinsight json response
             String avgDuration = parseAppInsightsResponse(response.toString());
 
-            writePerfKpiData(startDate, endDate, kpiId, avgDuration, context);
+            if (System.getProperty("ENV") != null && !"TEST".equalsIgnoreCase(System.getProperty("ENV"))) {
+                writePerfKpiData(startDate, endDate, kpiId, avgDuration, context);
+            }
+
             context.getLogger().info(String.format("PerformanceKpiService - %s record successfully inserted into ADX, average[%s]", kpiId, avgDuration));
 
             return Double.valueOf(avgDuration);
 
         } catch (Exception e) {
             context.getLogger().severe(String.format("PerformanceKpiService - %s Error executing KPI calculation: %s", kpiId, e.getMessage()));
+            e.printStackTrace();
             throw e;
         }
     }
@@ -329,7 +341,7 @@ public class PerfKpiService {
      * @param context Azure function context
      * @throws Exception
      */
-    private void writePerfKpiData(LocalDateTime startDate, 
+    public void writePerfKpiData(LocalDateTime startDate, 
                                     LocalDateTime endDate, 
                                     String kpiName, 
                                     String kpiValue, ExecutionContext context) throws Exception{
@@ -350,7 +362,11 @@ public class PerfKpiService {
 
         // Create connection string using Application ID & Secret
         ConnectionStringBuilder csb = PerfKpiHelper.getConnectionStringBuilder();
-            
+
+        if (csb == null || csb.getClusterUrl() == null) {
+            throw new IllegalStateException("Cluster URL is null! Ensure environment variables are set correctly.");
+        }
+        
         // prepare ingestion
         ByteArrayInputStream ingestQueryStream = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
         IngestClient ingestClient = IngestClientFactory.createClient(csb);

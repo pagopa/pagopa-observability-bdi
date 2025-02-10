@@ -60,7 +60,7 @@ public class CollectPerfData {
             context.getLogger().info(String.format("CollectPerfData - Processing interval: %s to %s, kpiId: %s", startDate, endDate, kpiId));
             
             // getting service instance        
-            PerfKpiService service = PerfKpiService.getInstance();
+            PerfKpiService service = new PerfKpiService();
 
             // if no kpiId has been specified, all kpis wil be collected
             switch (kpiId) {
