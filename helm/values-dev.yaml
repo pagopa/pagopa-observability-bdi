@@ -4,7 +4,7 @@ microservice-chart:
   fullnameOverride: ""
   image:
     repository: ghcr.io/pagopa/pagopa-observability-bdi
-    tag: "0.0.1-2-fix-PQ-317-bdi-deployment"
+    tag: "0.0.1-3-fix-PQ-317-bdi-deployment"
     pullPolicy: Always
   # https://github.com/Azure/azure-functions-host/blob/dev/src/WebJobs.Script.WebHost/Controllers/HostController.cs
   livenessProbe:
