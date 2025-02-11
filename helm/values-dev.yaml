@@ -29,8 +29,8 @@ microservice-chart:
     port: 80
   ingress:
     create: true
-    host: "weudev.qi.internal.dev.platform.pagopa.it"  # TODO
-    path: /pagopa-observability-bdi-service/(.*) # TODO
+    host: "weudev.qi.internal.dev.platform.pagopa.it"
+    path: qi/perf-kpi-bdi(.*)
   serviceAccount:
     create: false
     annotations: {}
