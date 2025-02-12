@@ -78,6 +78,7 @@ public class PerfKpiServiceTest {
     private MockedStatic<PerfKpiHelper> perfKpiHelperMock;
     private MockedStatic<ClientFactory> clientFactoryMock;
  
+    @SuppressWarnings("unused")
     @BeforeEach
     void setUp() {
         System.setProperty("ADX_DATABASE_NAME", "default_test_db");
@@ -138,7 +139,7 @@ public class PerfKpiServiceTest {
         LocalDateTime startDate = LocalDateTime.now().minusDays(1);
         LocalDateTime endDate = LocalDateTime.now();
     
-        lenient().when(kustoClient.execute(anyString(), anyString())).thenReturn(kustoOperationResult);
+        lenient().when(kustoClient.executeQuery(anyString(), anyString())).thenReturn(kustoOperationResult);
         when(kustoOperationResult.hasNext()).thenReturn(true);
         when(kustoOperationResult.getPrimaryResults()).thenReturn(kustoResultSetTable);
         when(kustoResultSetTable.next()).thenReturn(true);
@@ -149,7 +150,7 @@ public class PerfKpiServiceTest {
             String query = invocation.getArgument(1);
             System.out.println("execute() chiamato con: " + dbName + ", " + query);
             return kustoOperationResult;
-        }).when(kustoClient).execute(anyString(), anyString());
+        }).when(kustoClient).executeQuery(anyString(), anyString());
     
         int result = perfKpiService.executePerf02Kpi(startDate, endDate, context);
     

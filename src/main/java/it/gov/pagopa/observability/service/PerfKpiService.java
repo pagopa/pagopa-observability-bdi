@@ -97,7 +97,7 @@ public class PerfKpiService {
         );
         ConnectionStringBuilder csb = PerfKpiHelper.getConnectionStringBuilder();
         Client kustoClient = ClientFactory.createClient(csb);
-        KustoOperationResult result = kustoClient.execute(ADX_DB_NAME, perf02Query);
+        KustoOperationResult result = kustoClient.executeQuery(ADX_DB_NAME, perf02Query);
         int count = 0;
         KustoResultSetTable resultSet = null;
         if (result.hasNext()) {
@@ -151,7 +151,7 @@ public class PerfKpiService {
         Client kustoClient = ClientFactory.createClient(csb);
 
         // Execute query
-        KustoOperationResult result = kustoClient.execute(ADX_DB_NAME, perf0E2Query);
+        KustoOperationResult result = kustoClient.executeQuery(ADX_DB_NAME, perf0E2Query);
         int count = 0;
         KustoResultSetTable resultSet = null;
         if (result.hasNext()) {
@@ -413,7 +413,7 @@ public class PerfKpiService {
         ConnectionStringBuilder csb = PerfKpiHelper.getConnectionStringBuilder();
         Client client = ClientFactory.createClient(csb);
         
-        KustoOperationResult result = client.execute(ADX_DB_NAME, query);
+        KustoOperationResult result = client.executeQuery(ADX_DB_NAME, query);
         KustoResultSetTable resultSet = result.getPrimaryResults();
         if (resultSet.next()) {
             String avg_PERF01 = "100.00";
