@@ -23,6 +23,9 @@ microservice-chart:
     periodSeconds: 10
   deployment:
     create: true
+  ports:
+    - 80 #http
+    - 12345 #jmx-exporter
   service:
     create: true
     type: ClusterIP
