@@ -2,7 +2,7 @@ openapi: 3.0.1
 info:
   title: qi-observability-perf-kpi
   description: API for monitoring performance KPIs.
-  version: 0.0.10
+  version: 0.0.11
 servers:
   - url: http://localhost:8080
 tags:
