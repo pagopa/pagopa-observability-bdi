@@ -39,3 +39,7 @@ obj/
 
 # vscode stuff
 .vscode/
+
+# terraform .identity off
+.identity/.terraform/
+.terraform.lock*
