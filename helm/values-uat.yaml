@@ -29,11 +29,13 @@ microservice-chart:
   service:
     create: true
     type: ClusterIP
-    port: 80
+    ports:
+      - 80 #http
+      - 12345 #jmx-exporter
   ingress:
     create: true
     host: "weuuat.qi.internal.uat.platform.pagopa.it"
-    path: qi/perf-kpi-bdi(.*)
+    path: qi/perf-kpi-bdi/(.*)
   serviceAccount:
     create: false
     annotations: {}
