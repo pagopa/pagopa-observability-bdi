@@ -35,7 +35,7 @@ microservice-chart:
   ingress:
     create: true
     host: "weudev.qi.internal.dev.platform.pagopa.it"
-    path: /qi/perf-kpi-bdi/(.*)
+    path: /pagopa-qi-observabilty-bdi-service/(.*)
     servicePort: 80
   serviceAccount:
     create: false
