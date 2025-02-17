@@ -83,7 +83,7 @@ microservice-chart:
     PERF04_OPERATION_NAME: "p-node-for-psp-api-auth;rev=1 - 63ff4f22aca2fd18dcc4a6f7"
     PERF05_OPERATION_NAME: "p-nodo-per-pa-api-auth;rev=1 - 63b6e2da2a92e811a8f338f8"
     PERF06_OPERATION_NAME: "p-nodo-per-pa-api-auth;rev=1 - 63b6e2da2a92e811a8f338f9"
-    AZURE_AD_TENANT_ID: "7788edaf-0346-4068-9d79-c868aed15b3d"
+    AZURE_AD_TENANT_ID: "<<TODO>>"
     AZURE_AD_CLIENT_ID: "<<TODO>>"
   envSecret:
     APPLICATIONINSIGHTS_CONNECTION_STRING: "ai-p-connection-string"
