@@ -3,10 +3,10 @@ microservice-chart:
   nameOverride: ""
   fullnameOverride: ""
   image:
-    repository: pagopaucommonacr.azurecr.io/pagopa-observability-bdi
+    repository: ghcr.io/pagopa/pagopa-observability-bdi
     tag: "0.0.15"
     pullPolicy: Always
-  # https://github.com/Azure/azure-functions-host/blob/dev/src/WebJobs.Script.WebHost/Controllers/HostController.cs
+  #  https://github.com/Azure/azure-functions-host/blob/dev/src/WebJobs.Script.WebHost/Controllers/HostController.cs
   livenessProbe:
     httpGet:
       path: /info
@@ -49,11 +49,11 @@ microservice-chart:
     allowPrivilegeEscalation: false
   resources:
     requests:
-      memory: "512Mi"
+      memory: "400Mi"
       cpu: "0.25"
     limits:
       memory: "512Mi"
-      cpu: "0.25"
+      cpu: "0.30"
   autoscaling:
     enable: true
     minReplica: 1
@@ -79,14 +79,14 @@ microservice-chart:
     EVENT_HUB_KEY_NAME: "bdi-kpi-evt-tx"
     CLOUD_ROLE_NAME: "pagopa-u-apim West Europe"
     BETTERSTACK_API_URL: "https://uptime.betterstack.com/api/v2/monitors/2789316/sla"
-    PERF03_OPERATION_NAME: "u-node-for-psp-api-auth;rev=1 - 63756cf1451c1c01c4186bab"
-    PERF04_OPERATION_NAME: "u-node-for-psp-api-auth;rev=1 - 63fcb0f539519a2c40fd431a"
-    PERF05_OPERATION_NAME: "u-nodo-per-pa-api;rev=1 - 61e96321e0f4ba04a49d1285"
-    PERF06_OPERATION_NAME: ""
+    PERF03_OPERATION_NAME: "u-node-for-psp-api;rev=1 - <<TODO>>"
+    PERF04_OPERATION_NAME: "u-nodo-per-psp-api;rev=1 - <<TODO>>"
+    PERF05_OPERATION_NAME: "u-nodo-per-pa-api;rev=1 - <<TODO>>"
+    PERF06_OPERATION_NAME: "u-nodo-per-pa-api;rev=1 - <<TODO>>"
     AZURE_AD_TENANT_ID: "7788edaf-0346-4068-9d79-c868aed15b3d"
-    AZURE_AD_CLIENT_ID: ""
+    AZURE_AD_CLIENT_ID: "<<TODO>>"
   envSecret:
-    APPLICATIONINSIGHTS_CONNECTION_STRING: "ai-d-connection-string"
+    APPLICATIONINSIGHTS_CONNECTION_STRING: "ai-u-connection-string"
     AZURE_AD_CLIENT_SECRET: "azure-ad-client-secret"
     APP_INSIGHTS_API_KEY: "bdi-app-insights-api-key"
     EVENT_HUB_KEY: "evh-tx-bdi-kpi-key"
