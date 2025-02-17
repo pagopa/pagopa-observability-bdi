@@ -67,6 +67,7 @@ microservice-chart:
           type: Utilization # Allowed types are 'Utilization' or 'AverageValue'
           value: "75"
   envConfig:
+    ENVIRONMENT: "dev"
     WEBSITE_SITE_NAME: "pagopaobservabilitybdi"
     FUNCTIONS_WORKER_RUNTIME: "java"
     ADX_CLUSTER_URL: "https://pagopaddataexplorer.westeurope.kusto.windows.net"
