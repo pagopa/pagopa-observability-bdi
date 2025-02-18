@@ -5,7 +5,7 @@
 
     <groupId>it.gov.pagopa.observability</groupId>
     <artifactId>bdi-observability-functions</artifactId>
-    <version>0.0.15-3-some-deploy-stuff</version>
+    <version>0.0.15-5-some-deploy-stuff</version>
     <packaging>jar</packaging>
 
     <name>Azure Custom Fn</name>
