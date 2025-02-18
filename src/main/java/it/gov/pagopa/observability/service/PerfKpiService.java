@@ -111,7 +111,7 @@ public class PerfKpiService {
                 "PERF-02 Query Result[%s] startDate[%s] endDate[%s]", count, startDate, endDate));
 
         // insert the result into the destination table
-        if (System.getProperty("ENV") != null && !"TEST".equalsIgnoreCase(System.getProperty("ENV"))) {
+        if (System.getProperty("ENVIRONMENT") == null || "TEST".equalsIgnoreCase(System.getProperty("ENVIRONMENT"))) {
             writePerfKpiData(startDate, endDate, "PERF-02", Integer.toString(count), context);
         }
 
@@ -237,7 +237,7 @@ public class PerfKpiService {
             // parse appinsight json response
             String avgDuration = parseAppInsightsResponse(response.toString());
 
-            if (System.getProperty("ENV") != null && !"TEST".equalsIgnoreCase(System.getProperty("ENV"))) {
+            if (System.getProperty("ENVIRONMENT") == null || "TEST".equalsIgnoreCase(System.getProperty("ENVIRONMENT"))) {
                 writePerfKpiData(startDate, endDate, kpiId, avgDuration, context);
             }
 
@@ -341,45 +341,55 @@ public class PerfKpiService {
      * @param context Azure function context
      * @throws Exception
      */
-    public void writePerfKpiData(LocalDateTime startDate, 
-                                    LocalDateTime endDate, 
-                                    String kpiName, 
-                                    String kpiValue, ExecutionContext context) throws Exception{
+    public void writePerfKpiData(LocalDateTime startDate,
+            LocalDateTime endDate,
+            String kpiName,
+            String kpiValue, ExecutionContext context) throws Exception {
 
-        // formatting date
+        // Formatting date
         LocalDateTime now = LocalDateTime.now();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-        String data = String.format(
-            ".ingest inline into table %s <| %s,%s,%s,%s,%s",
-            ADX_PERF_TABLE,
-            now,
-            startDate.format(formatter),
-            endDate.format(formatter),
-            kpiName,
-            kpiValue
-        );
+        String csvData = String.format("%s,%s,%s,%s,%s\n",
+                now.format(formatter),
+                startDate.format(formatter),
+                endDate.format(formatter),
+                kpiName,
+                kpiValue);
 
-        // Create connection string using Application ID & Secret
+        context.getLogger()
+                .info(String.format("writePerfKpiData - Inserting data into [%s]: %s", ADX_PERF_TABLE, csvData));
+
+        // Creazione della connessione
         ConnectionStringBuilder csb = PerfKpiHelper.getConnectionStringBuilder();
 
         if (csb == null || csb.getClusterUrl() == null) {
             throw new IllegalStateException("Cluster URL is null! Ensure environment variables are set correctly.");
         }
-        
-        // prepare ingestion
-        ByteArrayInputStream ingestQueryStream = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
-        IngestClient ingestClient = IngestClientFactory.createClient(csb);
-        IngestionProperties ingestionProperties = new IngestionProperties(ADX_DB_NAME, ADX_PERF_TABLE);
-        ingestionProperties.setDataFormat(IngestionProperties.DataFormat.CSV);
-        StreamSourceInfo sourceInfo = new StreamSourceInfo(ingestQueryStream);
 
-        // execute ingestion
-        ingestClient.ingestFromStream(sourceInfo, ingestionProperties);
-        ingestClient.close();
+        // Ingestione dati come stream CSV
+        try (ByteArrayInputStream ingestStream = new ByteArrayInputStream(csvData.getBytes(StandardCharsets.UTF_8));
+        IngestClient ingestClient = IngestClientFactory.createClient(csb)) {
 
-        context.getLogger().info(String.format("writePerfKpiData - %s Data successfully inserted into[%s]", kpiName, ADX_PERF_TABLE));
+            IngestionProperties ingestionProperties = new IngestionProperties(ADX_DB_NAME, ADX_PERF_TABLE);
+            ingestionProperties.setDataFormat(IngestionProperties.DataFormat.CSV);
+            ingestionProperties.setFlushImmediately(true); // Forza il flush immediato
+
+            StreamSourceInfo sourceInfo = new StreamSourceInfo(ingestStream);
+
+            // Ingestione dati
+            ingestClient.ingestFromStream(sourceInfo, ingestionProperties);
+
+            context.getLogger().info(
+                    String.format("writePerfKpiData - %s successfully inserted into [%s]", kpiName, ADX_PERF_TABLE));
+
+        } catch (Exception e) {
+            context.getLogger().severe(String.format("writePerfKpiData - Error inserting data into [%s]: %s",
+                    ADX_PERF_TABLE, e.getMessage()));
+            throw e;
+        }
     }
+
 
     /**
      * Perform the query on ADX custom table in order to compute the comma separated string
