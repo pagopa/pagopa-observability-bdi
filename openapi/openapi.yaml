@@ -2,7 +2,7 @@ openapi: 3.0.1
 info:
   title: qi-observability-perf-kpi
   description: API for monitoring performance KPIs.
-  version: 0.0.15-6-some-deploy-stuff
+  version: 0.0.15-7-some-deploy-stuff
 servers:
   - url: https://${hostname}
 tags:
@@ -53,7 +53,6 @@ paths:
           description: Unauthorized. Authentication required or invalid credentials.
         '500':
           description: Internal server error.
-
   /info:
     get:
       summary: Application Info
@@ -76,7 +75,6 @@ paths:
           description: Unauthorized. Authentication required or invalid credentials.
         '500':
           description: Internal server error.
-
   /quarter/{quarter}:
     get:
       summary: KPI Aggregation by Quarter
