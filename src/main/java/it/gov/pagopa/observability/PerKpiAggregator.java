@@ -27,7 +27,7 @@ public class PerKpiAggregator {
     @FunctionName("PerKpiAggregator")
     public HttpResponseMessage httpTrigger(
             @HttpTrigger(name = "req", methods = {HttpMethod.POST, HttpMethod.GET}, 
-                authLevel = AuthorizationLevel.FUNCTION, route = "quarter/{quarter}")
+                authLevel = AuthorizationLevel.ANONYMOUS, route = "quarter/{quarter}")
             HttpRequestMessage<Optional<String>> request,
             @BindingName("quarter") String quarter, 
             final ExecutionContext context) {

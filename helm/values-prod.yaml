@@ -3,10 +3,10 @@ microservice-chart:
   nameOverride: ""
   fullnameOverride: ""
   image:
-    repository: pagopapcommonacr.azurecr.io/pagopa-observability-bdi
-    tag: "0.0.15"
+    repository: ghcr.io/pagopa/pagopa-observability-bdi
+    tag: "0.0.15-8-some-deploy-stuff"
     pullPolicy: Always
-  # https://github.com/Azure/azure-functions-host/blob/dev/src/WebJobs.Script.WebHost/Controllers/HostController.cs
+  #  https://github.com/Azure/azure-functions-host/blob/dev/src/WebJobs.Script.WebHost/Controllers/HostController.cs
   livenessProbe:
     httpGet:
       path: /info
@@ -49,15 +49,15 @@ microservice-chart:
     allowPrivilegeEscalation: false
   resources:
     requests:
-      memory: "512Mi"
-      cpu: "0.25"
+      memory: "400Mi"
+      cpu: "0.40"
     limits:
       memory: "512Mi"
-      cpu: "0.25"
+      cpu: "0.50"
   autoscaling:
     enable: true
     minReplica: 1
-    maxReplica: 2
+    maxReplica: 1
     pollingInterval: 10 # seconds
     cooldownPeriod: 50 # seconds
     triggers:
@@ -67,26 +67,27 @@ microservice-chart:
           type: Utilization # Allowed types are 'Utilization' or 'AverageValue'
           value: "75"
   envConfig:
+    ENVIRONMENT: "prod"
     WEBSITE_SITE_NAME: "pagopaobservabilitybdi"
     FUNCTIONS_WORKER_RUNTIME: "java"
-    ADX_CLUSTER_URL: "https://pagopaudataexplorer.westeurope.kusto.windows.net"
+    ADX_CLUSTER_URL: "https://pagopapdataexplorer.westeurope.kusto.windows.net"
     ADX_DATABASE_NAME: "re"
     ADX_SOURCE_TABLE: "ReEvent"
     ADX_PERF_TABLE: "BDI_PERF_KPI"
-    APP_INSIGHTS_API_URL: "https://api.applicationinsights.io/v1/apps/58b37248-3089-47ba-aa07-a2844fabe46a/query"
+    APP_INSIGHTS_API_URL: "https://api.applicationinsights.io/v1/apps/<TODO>/query"
     EVENT_HUB_NAME: "bdi-kpi-ingestion-dl"
-    EVENT_HUB_NAMESPACE: "pagopa-u-itn-observ-evh.servicebus.windows.net"
-    EVENT_HUB_KEY_NAME: "bdi-kpi-evt-tx"
-    CLOUD_ROLE_NAME: "pagopa-u-apim West Europe"
+    EVENT_HUB_NAMESPACE: "pagopa-p-itn-qi-evh.servicebus.windows.net"
+    EVENT_HUB_KEY_NAME: "bdi-kpi-ingestion-dl-evt-tx"
+    CLOUD_ROLE_NAME: "pagopa-p-apim West Europe"
     BETTERSTACK_API_URL: "https://uptime.betterstack.com/api/v2/monitors/2789316/sla"
     PERF03_OPERATION_NAME: "p-node-for-psp-api-auth;rev=1 - 63b6e2daea7c4a25440fdaa6"
     PERF04_OPERATION_NAME: "p-node-for-psp-api-auth;rev=1 - 63ff4f22aca2fd18dcc4a6f7"
     PERF05_OPERATION_NAME: "p-nodo-per-pa-api-auth;rev=1 - 63b6e2da2a92e811a8f338f8"
     PERF06_OPERATION_NAME: "p-nodo-per-pa-api-auth;rev=1 - 63b6e2da2a92e811a8f338f9"
     AZURE_AD_TENANT_ID: "7788edaf-0346-4068-9d79-c868aed15b3d"
-    AZURE_AD_CLIENT_ID: ""
+    AZURE_AD_CLIENT_ID: "1e6c0b82-3e63-432d-9ad4-a443e47e1a19"
   envSecret:
-    APPLICATIONINSIGHTS_CONNECTION_STRING: "ai-d-connection-string"
+    APPLICATIONINSIGHTS_CONNECTION_STRING: "ai-p-connection-string"
     AZURE_AD_CLIENT_SECRET: "azure-ad-client-secret"
     APP_INSIGHTS_API_KEY: "bdi-app-insights-api-key"
     EVENT_HUB_KEY: "evh-tx-bdi-kpi-key"

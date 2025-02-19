@@ -84,7 +84,7 @@ public class PerfKpiServiceTest {
         System.setProperty("ADX_DATABASE_NAME", "default_test_db");
         System.setProperty("ADX_PERF_TABLE", "test_table");
         System.setProperty("ADX_CLUSTER_URL", "https://mock-cluster.kusto.windows.net");
-        System.setProperty("ENV", "TEST");
+        System.setProperty("ENVIRONMENT", "TEST");
         System.setProperty("APP_INSIGHTS_API_KEY", "mock-api-key");
         System.setProperty("APP_INSIGHTS_API_URL", "https://api.applicationinsights.io/v1/apps/76537955-6128-45d4-bf32-b0034ed17e4d/query");
 
