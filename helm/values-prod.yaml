@@ -74,7 +74,7 @@ microservice-chart:
     ADX_DATABASE_NAME: "re"
     ADX_SOURCE_TABLE: "ReEvent"
     ADX_PERF_TABLE: "BDI_PERF_KPI"
-    APP_INSIGHTS_API_URL: "https://api.applicationinsights.io/v1/apps/<TODO>/query"
+    APP_INSIGHTS_API_URL: "https://api.applicationinsights.io/v1/apps/a38135b3-34a0-41ce-81b8-3a9564e8250f/query"
     EVENT_HUB_NAME: "bdi-kpi-ingestion-dl"
     EVENT_HUB_NAMESPACE: "pagopa-p-itn-qi-evh.servicebus.windows.net"
     EVENT_HUB_KEY_NAME: "bdi-kpi-ingestion-dl-evt-tx"
