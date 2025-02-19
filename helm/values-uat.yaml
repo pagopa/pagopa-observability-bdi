@@ -89,9 +89,9 @@ microservice-chart:
   envSecret:
     APPLICATIONINSIGHTS_CONNECTION_STRING: "ai-u-connection-string"
     AZURE_AD_CLIENT_SECRET: "azure-ad-client-secret"
-    APP_INSIGHTS_API_KEY: "bdi-app-insights-api-key"
+    APP_INSIGHTS_API_KEY: "bdi-ai-api-key"
     EVENT_HUB_KEY: "evh-tx-bdi-kpi-key"
-    BETTERSTACK_API_KEY: "betterstack-apikey"
+    BETTERSTACK_API_KEY: "betterstack-api-key"
   keyvault:
     name: "pagopa-u-qi-kv"
     tenantId: "7788edaf-0346-4068-9d79-c868aed15b3d"
