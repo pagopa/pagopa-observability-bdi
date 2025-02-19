@@ -434,7 +434,9 @@ public class PerfKpiService {
                 avg_PERF01 = df.format(perf01d);
             } catch (Exception e) {
                 context.getLogger().severe(String.format("queryKpiAverages - error while getting avg_PERF01 from resultset: %s", e.getMessage()));
+                avg_PERF01 = "0.00";
             }
+
             String avg_PERF02 = "0"; 
             String avg_PERF02E = "0"; 
             String avg_PERF03 = "0"; 
@@ -443,12 +445,12 @@ public class PerfKpiService {
             String avg_PERF06 = "0"; 
             
             try {
-                avg_PERF02 = resultSet.getString("avg_PERF02");
-                avg_PERF02E = resultSet.getString("avg_PERF02E");
-                avg_PERF03 = resultSet.getString("avg_PERF03");
-                avg_PERF04 = resultSet.getString("avg_PERF04");
-                avg_PERF05 = resultSet.getString("avg_PERF05");
-                avg_PERF06 = resultSet.getString("avg_PERF06");
+                avg_PERF02 = resultSet.getString("avg_PERF02") != null ? resultSet.getString("avg_PERF02") : "0";
+                avg_PERF02E = resultSet.getString("avg_PERF02E") != null ? resultSet.getString("avg_PERF02E") : "0";
+                avg_PERF03 = resultSet.getString("avg_PERF03") != null ? resultSet.getString("avg_PERF03") : "0";
+                avg_PERF04 = resultSet.getString("avg_PERF04") != null ? resultSet.getString("avg_PERF04") : "0";
+                avg_PERF05 = resultSet.getString("avg_PERF05") != null ? resultSet.getString("avg_PERF05") : "0";
+                avg_PERF06 = resultSet.getString("avg_PERF06") != null ? resultSet.getString("avg_PERF06") : "0";
             } catch (Exception e) {
                 context.getLogger().severe(String.format("queryKpiAverages - error while getting kpi from resultset: %s", e.getMessage()));
             }
@@ -456,7 +458,7 @@ public class PerfKpiService {
             context.getLogger().severe(String.format("queryKpiAverages - kpi averages computed"));
             
             return String.format("%s,%s,%s,%s,%s,%s,%s",
-            avg_PERF01, avg_PERF02, avg_PERF02E, avg_PERF03, avg_PERF04, avg_PERF05, avg_PERF06);
+                avg_PERF01, avg_PERF02, avg_PERF02E, avg_PERF03, avg_PERF04, avg_PERF05, avg_PERF06);
             
         } else {
             context.getLogger().severe(String.format("queryKpiAverages - the query produced no result, returning the default value"));
