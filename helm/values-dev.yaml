@@ -4,7 +4,7 @@ microservice-chart:
   fullnameOverride: ""
   image:
     repository: ghcr.io/pagopa/pagopa-observability-bdi
-    tag: "0.6.0"
+    tag: "0.6.1"
     pullPolicy: Always
   #  https://github.com/Azure/azure-functions-host/blob/dev/src/WebJobs.Script.WebHost/Controllers/HostController.cs
   livenessProbe:
@@ -82,8 +82,8 @@ microservice-chart:
     BETTERSTACK_API_URL: "https://uptime.betterstack.com/api/v2/monitors/2789316/sla"
     PERF03_OPERATION_NAME: "d-node-for-psp-api-auth;rev=1 - 637608a0c257810fc0ecfe22" # sendPaymentOutcomeV2
     PERF04_OPERATION_NAME: "d-nodo-per-psp-api-auth;rev=1 - 63fc7fce3b3a670f709d79e9" # nodoInviaFlussoRendicontazione
-    PERF05_OPERATION_NAME: "d-nodo-per-pa-api-auth;rev=1 - 6352c3bcc257810f183b398b"  # nodoChiediElencoFlussiRendicontazione
-    PERF06_OPERATION_NAME: "d-nodo-per-pa-api-auth;rev=1 - 6352c3bcc257810f183b398c"  # nodoChiediFlussoRendicontazione
+    PERF05_OPERATION_NAME: "d-nodo-per-pa-api-auth;rev=1 - 6352c3bcc257810f183b398b" # nodoChiediElencoFlussiRendicontazione
+    PERF06_OPERATION_NAME: "d-nodo-per-pa-api-auth;rev=1 - 6352c3bcc257810f183b398c" # nodoChiediFlussoRendicontazione
     AZURE_AD_TENANT_ID: "7788edaf-0346-4068-9d79-c868aed15b3d"
     AZURE_AD_CLIENT_ID: "8677a3ca-8d05-453f-947c-0bdb1d15e512"
   envSecret:
