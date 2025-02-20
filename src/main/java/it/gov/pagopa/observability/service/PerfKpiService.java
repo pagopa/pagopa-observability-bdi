@@ -82,7 +82,7 @@ public class PerfKpiService {
      * @return the number of total messages
      * @throws Exception
      */
-    public int executePerf02Kpi(LocalDateTime startDate, LocalDateTime endDate, ExecutionContext context) throws Exception {
+    public String executePerf02Kpi(LocalDateTime startDate, LocalDateTime endDate, ExecutionContext context) throws Exception {
 
         
         String perf02Query = String.format(
@@ -115,7 +115,7 @@ public class PerfKpiService {
             writePerfKpiData(startDate, endDate, "PERF-02", Integer.toString(count), context);
         }
 
-        return count;
+        return String.valueOf(count);
     }
 
     /**
@@ -128,7 +128,7 @@ public class PerfKpiService {
      * @return toal number of messages in error
      * @throws Exception
      */
-    public int executePerf02EKpi(LocalDateTime startDate, LocalDateTime endDate, ExecutionContext context) throws Exception {
+    public String executePerf02EKpi(LocalDateTime startDate, LocalDateTime endDate, ExecutionContext context) throws Exception {
 
         String perf0E2Query = String.format(
             "let start = datetime(%s);" + 
@@ -164,7 +164,7 @@ public class PerfKpiService {
         context.getLogger().info(String.format("executePerf02EKpi - PERF-02E Query Result[%s] startDate[%s] endDate[%s]", count, startDate, endDate));
 
         writePerfKpiData(startDate, endDate, "PERF-02E", Integer.toString(count), context);
-        return count;
+        return String.valueOf(count);
     }
 
     /**
@@ -177,7 +177,7 @@ public class PerfKpiService {
      * @return
      * @throws Exception
      */
-    public double executePerfKpi(LocalDateTime startDate, LocalDateTime endDate, String kpiId, ExecutionContext context) throws Exception {
+    public String executePerfKpi(LocalDateTime startDate, LocalDateTime endDate, String kpiId, ExecutionContext context) throws Exception {
 
         try {
 
@@ -205,6 +205,9 @@ public class PerfKpiService {
                     + "| project avg_duration" ,
                 startDate.toString(), endDate.toString(), CLOUD_ROLE_NAME, operationName
             );
+
+            context.getLogger().info(String.format("executePerfKpi - %s using query [%s]", kpiId, query));
+
             String payload = String.format("{\"query\": \"%s\"}", query);
 
             // Create connection
@@ -243,7 +246,7 @@ public class PerfKpiService {
 
             context.getLogger().info(String.format("PerformanceKpiService - %s record successfully inserted into ADX, average[%s]", kpiId, avgDuration));
 
-            return Double.valueOf(avgDuration);
+            return String.valueOf(avgDuration);
 
         } catch (Exception e) {
             context.getLogger().severe(String.format("PerformanceKpiService - %s Error executing KPI calculation: %s", kpiId, e.getMessage()));
@@ -289,7 +292,7 @@ public class PerfKpiService {
      * @param context Azure function context
      * @throws Exception
      */
-    public void executePerf01Kpi(LocalDateTime startDate, LocalDateTime endDate, ExecutionContext context) throws Exception {
+    public String executePerf01Kpi(LocalDateTime startDate, LocalDateTime endDate, ExecutionContext context) throws Exception {
 
         DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         
@@ -323,6 +326,8 @@ public class PerfKpiService {
 
             // write kpi to db
             writePerfKpiData(startDate, endDate, "PERF-01", availabilty, context);
+
+            return availabilty;
             
         } else {
             throw new RuntimeException(String.format("executePerf01Kpi - %s Error executing KPI calculation: %s - %s",

@@ -63,12 +63,21 @@ public class CollectPerfData {
             PerfKpiService service = new PerfKpiService();
 
             // if no kpiId has been specified, all kpis wil be collected
+            String rtPerf01  = "0.00";
+            String rtPerf02  = "0";
+            String rtPerf02E = "0";
+            String rtPerf03  = "0";
+            String rtPerf04  = "0";
+            String rtPerf05  = "0";
+            String rtPerf06  = "0";
+            String rtOneKpi  = "0";  
+
             switch (kpiId) {
                 case "PERF-01":
-                    service.executePerf01Kpi(startDate, endDate, context);
+                    rtOneKpi = service.executePerf01Kpi(startDate, endDate, context);
                     break;
                 case "PERF-02":
-                    service.executePerf02Kpi(startDate, endDate, context);
+                    rtOneKpi = service.executePerf02Kpi(startDate, endDate, context);
                     break;
                 case "PERF-02E":
                     // if startDate is not specified then startDate is now minus one hour
@@ -80,39 +89,54 @@ public class CollectPerfData {
                     endDate = startDate.plusHours(1);
                     context.getLogger().info(String.format("CollectPerf02EData - PERF-02E HTTP triggered. " +
                         "Processing interval: %s to %s", startDate, endDate));                
-                    service.executePerf02EKpi(startDate, endDate, context);
+                    rtOneKpi = service.executePerf02EKpi(startDate, endDate, context);
                     break;
                 case "PERF-03":
-                    service.executePerfKpi(startDate, endDate, "PERF-03", context);
+                    rtOneKpi = service.executePerfKpi(startDate, endDate, "PERF-03", context);
                     break;
                 case "PERF-04":
-                    service.executePerfKpi(startDate, endDate, "PERF-04", context);
+                    rtOneKpi = service.executePerfKpi(startDate, endDate, "PERF-04", context);
                     break;
                 case "PERF-05":
-                    service.executePerfKpi(startDate, endDate, "PERF-05", context);
+                    rtOneKpi = service.executePerfKpi(startDate, endDate, "PERF-05", context);
                     break;
                 case "PERF-06":
-                    service.executePerfKpi(startDate, endDate, "PERF-06", context);
+                    rtOneKpi = service.executePerfKpi(startDate, endDate, "PERF-06", context);
                     break;
                 default: // collect all kpis
-                    service.executePerf01Kpi(startDate, endDate, context);
-                    service.executePerf02Kpi(startDate, endDate, context);
-                    service.executePerf02EKpi(startDate, endDate, context);
-                    service.executePerfKpi(startDate, endDate, "PERF-03", context);
-                    service.executePerfKpi(startDate, endDate, "PERF-04", context);
-                    service.executePerfKpi(startDate, endDate, "PERF-05", context);
-                    service.executePerfKpi(startDate, endDate, "PERF-06", context);
+                    rtPerf01 = service.executePerf01Kpi(startDate, endDate, context);
+                    rtPerf02 = service.executePerf02Kpi(startDate, endDate, context);
+                    rtPerf02E = service.executePerf02EKpi(startDate, endDate, context);
+                    rtPerf03 = service.executePerfKpi(startDate, endDate, "PERF-03", context);
+                    rtPerf04 = service.executePerfKpi(startDate, endDate, "PERF-04", context);
+                    rtPerf05 = service.executePerfKpi(startDate, endDate, "PERF-05", context);
+                    rtPerf06 = service.executePerfKpi(startDate, endDate, "PERF-06", context);
                     break;
             }
             
             // Build OK response
             context.getLogger().info(String.format("CollectPerfData - Execution completed"));
 
+            // Build response details
+            StringBuffer details = new StringBuffer().append("KPI: [").append(kpiId).append("]");
+            if ("ALL".equalsIgnoreCase(kpiId)) {
+                details.append(" values: [").append(rtPerf01)
+                    .append(" | ").append(rtPerf02)
+                    .append(" | ").append(rtPerf02E)
+                    .append(" | ").append(rtPerf03)
+                    .append(" | ").append(rtPerf04)
+                    .append(" | ").append(rtPerf05)
+                    .append(" | ").append(rtPerf06)
+                    .append("]");
+            } else {
+                details.append(" value: [").append(rtOneKpi).append("]");
+            }
+
             ObjectMapper objectMapper = new ObjectMapper();
             ObjectNode rootNode = objectMapper.createObjectNode();
             rootNode.put("status", String.valueOf(HttpStatus.OK));
-            rootNode.put("message", String.format("CollectPerfData - Processed interval: %s to %s", startDate, endDate));
-            rootNode.put("details", String.format("CollectPerfData - Executed kpi: %s ", kpiId));
+            rootNode.put("message", String.format("Processed interval: %s to %s", startDate, endDate));
+            rootNode.put("details", details.toString());
             String responseBody = objectMapper.writeValueAsString(rootNode);
             return request.createResponseBuilder(HttpStatus.OK)
                     .header("Content-Type", "application/json")
