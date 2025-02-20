@@ -152,9 +152,9 @@ public class PerfKpiServiceTest {
             return kustoOperationResult;
         }).when(kustoClient).executeQuery(anyString(), anyString());
     
-        int result = perfKpiService.executePerf02Kpi(startDate, endDate, context);
+        String result = perfKpiService.executePerf02Kpi(startDate, endDate, context);
     
-        assertEquals(42, result);
+        assertEquals("42", result);
     }
     
 
@@ -165,7 +165,7 @@ public class PerfKpiServiceTest {
         LocalDateTime endDate = LocalDateTime.now();
         String kpiId = "PERF-03";
 
-        double result = perfKpiService.executePerfKpi(startDate, endDate, kpiId, context);
+        String result = perfKpiService.executePerfKpi(startDate, endDate, kpiId, context);
 
         assertEquals(result, 123.450000d);
     }
