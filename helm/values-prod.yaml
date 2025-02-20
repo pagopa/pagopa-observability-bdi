@@ -80,10 +80,10 @@ microservice-chart:
     EVENT_HUB_KEY_NAME: "bdi-kpi-ingestion-dl-evt-tx"
     CLOUD_ROLE_NAME: "pagopa-p-apim West Europe"
     BETTERSTACK_API_URL: "https://uptime.betterstack.com/api/v2/monitors/2789316/sla"
-    PERF03_OPERATION_NAME: "p-node-for-psp-api-auth;rev=1 - 63b6e2daea7c4a25440fdaa6" # sendPaymentOutcomeV2
-    PERF04_OPERATION_NAME: "p-node-for-psp-api-auth;rev=1 - 63ff4f22aca2fd18dcc4a6f7" # nodoInviaFlussoRendicontazione
-    PERF05_OPERATION_NAME: "p-nodo-per-pa-api-auth;rev=1 - 63b6e2da2a92e811a8f338f8" # nodoChiediElencoFlussiRendicontazione
-    PERF06_OPERATION_NAME: "p-nodo-per-pa-api-auth;rev=1 - 63b6e2da2a92e811a8f338f9" # nodoChiediFlussoRendicontazione
+    PERF-03_OPERATION_NAME: "p-node-for-psp-api-auth;rev=1 - 63b6e2daea7c4a25440fdaa6" # sendPaymentOutcomeV2
+    PERF-04_OPERATION_NAME: "p-node-for-psp-api-auth;rev=1 - 63ff4f22aca2fd18dcc4a6f7" # nodoInviaFlussoRendicontazione
+    PERF-05_OPERATION_NAME: "p-nodo-per-pa-api-auth;rev=1 - 63b6e2da2a92e811a8f338f8" # nodoChiediElencoFlussiRendicontazione
+    PERF-06_OPERATION_NAME: "p-nodo-per-pa-api-auth;rev=1 - 63b6e2da2a92e811a8f338f9" # nodoChiediFlussoRendicontazione
     AZURE_AD_TENANT_ID: "7788edaf-0346-4068-9d79-c868aed15b3d"
     AZURE_AD_CLIENT_ID: "1e6c0b82-3e63-432d-9ad4-a443e47e1a19"
   envSecret:
