@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.stream.Collectors;
 
 import com.azure.core.credential.AzureNamedKeyCredential;
 import com.azure.messaging.eventhubs.EventData;
@@ -38,10 +39,8 @@ public class PerfKpiService {
     private String ADX_DB_NAME;
     private String ADX_SOURCE_TABLE;
     private String ADX_PERF_TABLE;
-    private String APP_INSIGHTS_API_URL;
     private String BETTERSTACK_API_URL;
     private String BETTERSTACK_API_KEY;
-    private String APP_INSIGHTS_API_KEY;
     private String CLOUD_ROLE_NAME;
     private String EVENT_HUB_NAME;
     private String EVENT_HUB_NAMESPACE;
@@ -62,10 +61,8 @@ public class PerfKpiService {
         }
         this.ADX_SOURCE_TABLE = System.getenv("ADX_SOURCE_TABLE");
         this.ADX_PERF_TABLE = System.getenv("ADX_PERF_TABLE");
-        this.APP_INSIGHTS_API_URL = System.getenv("APP_INSIGHTS_API_URL");
         this.BETTERSTACK_API_URL = System.getenv("BETTERSTACK_API_URL");
         this.BETTERSTACK_API_KEY = System.getenv("BETTERSTACK_API_KEY");
-        this.APP_INSIGHTS_API_KEY = System.getenv("APP_INSIGHTS_API_KEY");
         this.CLOUD_ROLE_NAME = System.getenv("CLOUD_ROLE_NAME");
         this.EVENT_HUB_NAME = System.getenv("EVENT_HUB_NAME");
         this.EVENT_HUB_NAMESPACE = System.getenv("EVENT_HUB_NAMESPACE");
@@ -178,67 +175,96 @@ public class PerfKpiService {
      * @throws Exception
      */
     public String executePerfKpi(LocalDateTime startDate, LocalDateTime endDate, String kpiId, ExecutionContext context) throws Exception {
-
         try {
-
             context.getLogger().info(String.format("executePerfKpi - %s calculating KPI for period: %s to %s", kpiId, startDate, endDate));
 
-            APP_INSIGHTS_API_KEY = (APP_INSIGHTS_API_KEY == null) ? System.getProperty("APP_INSIGHTS_API_KEY") : APP_INSIGHTS_API_KEY; 
-            if (APP_INSIGHTS_API_KEY == null) {
-                throw new IllegalStateException("The environment variable APP_INSIGHTS_API_KEY is not configured");
+            // get principal data
+            String tenantId = System.getenv("AZURE_AD_AI_TENANT_ID");
+            String clientId = System.getenv("AZURE_AD_AI_CLIENT_ID");
+            String clientSecret = System.getenv("AZURE_AD_AI_CLIENT_SECRET");
+            String appInsightsAppId = System.getenv("APP_INSIGHTS_APP_ID");
+
+            if (tenantId == null || clientId == null || clientSecret == null) {
+                throw new IllegalStateException("executePerfKpi - Service Principal variables not properly configured!");
             }
 
-            APP_INSIGHTS_API_URL = (APP_INSIGHTS_API_URL == null) ? System.getProperty("APP_INSIGHTS_API_URL") : APP_INSIGHTS_API_URL; 
-            if (APP_INSIGHTS_API_URL == null) {
-                throw new IllegalStateException("The environment variable APP_INSIGHTS_API_URL is not configured");
+            if (appInsightsAppId == null || appInsightsAppId.isEmpty()) {
+                throw new IllegalStateException("executePerfKpi - APP_INSIGHTS_APP_ID not configured.");
             }
 
-            // Query Application Insights
+            // get the token OAuth 2.0 from Azure AD for Application Insights
+            String accessToken = getAccessToken(tenantId, clientId, clientSecret);
+
+            // build the operation name for the specificKPI
             String operationName = System.getenv(kpiId + "_OPERATION_NAME");
+            if (operationName == null || operationName.isEmpty()) {
+                throw new IllegalArgumentException("executePerfKpi - operationName not set for KPI: " + kpiId);
+            }
+
+            // format date in ISO 8601
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
+            String startDateStr = startDate.atOffset(java.time.ZoneOffset.UTC).format(formatter);
+            String endDateStr = endDate.atOffset(java.time.ZoneOffset.UTC).format(formatter);
+
+            // build query Kusto for Application Insights
             String query = String.format(
-                "requests | where timestamp between (todatetime('%s') .. todatetime('%s')) "
-                    + "| where cloud_RoleName == '%s' "
-                    //+ "| where name in ('POST /nodo-auth/node-for-psp/v1', 'POST /nodo-auth/node-for-psp/V1/') "
-                    + "| where operation_Name == '%s' "
-                    + "| summarize avg_duration = avg(duration) "
-                    + "| extend avg_duration = iff(isnan(avg_duration), 0.0, avg_duration)"
-                    + "| project avg_duration" ,
-                startDate.toString(), endDate.toString(), CLOUD_ROLE_NAME, operationName
+                "requests | where timestamp between (datetime('%s') .. datetime('%s')) " +
+                "| where cloud_RoleName == '%s' " +
+                "| where operation_Name == '%s' " +
+                "| summarize avg_duration = avg(duration) " +
+                "| extend avg_duration = iff(isnan(avg_duration), 0.0, avg_duration) " +
+                "| project avg_duration",
+                startDateStr, endDateStr, CLOUD_ROLE_NAME, operationName
             );
 
             context.getLogger().info(String.format("executePerfKpi - %s using query [%s]", kpiId, query));
 
-            String payload = String.format("{\"query\": \"%s\"}", query);
+            // build the api REST URL for Application Insights
+            String apiUrl = String.format("https://api.applicationinsights.io/v1/apps/%s/query", appInsightsAppId);
 
-            // Create connection
-            HttpURLConnection conn = (HttpURLConnection) new URL(APP_INSIGHTS_API_URL).openConnection();
+            // make the HTTP POST
+            HttpURLConnection conn = (HttpURLConnection) new URL(apiUrl).openConnection();
             conn.setRequestMethod("POST");
-            conn.setRequestProperty("x-api-key", APP_INSIGHTS_API_KEY);
+            conn.setRequestProperty("Authorization", "Bearer " + accessToken); // use the OAuth 2.0 token
             conn.setRequestProperty("Content-Type", "application/json");
             conn.setDoOutput(true);
 
-            // Execute request
+            // extract the payload
+            String payload = String.format("{\"query\": \"%s\"}", query);
             try (OutputStream os = conn.getOutputStream()) {
-                os.write(payload.getBytes());
+                os.write(payload.getBytes(StandardCharsets.UTF_8));
                 os.flush();
             }
 
-            // Read response
-            if (conn.getResponseCode() != 200) {
-                throw new RuntimeException(String.format("executePerfKpi - %s Error during Application Insights invocation: %s", kpiId, conn.getResponseCode()));
+            // read response
+            int responseCode = conn.getResponseCode();
+            if (responseCode != 200) {
+                throw new RuntimeException(String.format("executePerfKpi - %s Error during API request: %s", kpiId, responseCode));
             }
 
-            StringBuilder response = new StringBuilder();
-            try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
-                String line;
-                while ((line = br.readLine()) != null) {
-                    response.append(line);
-                }
+            String responseBody;
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+                responseBody = reader.lines().collect(Collectors.joining("\n"));
             }
             conn.disconnect();
-            
-            // parse appinsight json response
-            String avgDuration = parseAppInsightsResponse(response.toString());
+
+            // parse the JSON response
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode rootNode = objectMapper.readTree(responseBody);
+            JsonNode tablesNode = rootNode.path("tables");
+            String avgDuration = "0";
+
+            if (tablesNode.isArray() && tablesNode.size() > 0) {
+                JsonNode firstTable = tablesNode.get(0);
+                JsonNode rowsNode = firstTable.path("rows");
+
+                if (rowsNode.isArray() && rowsNode.size() > 0) {
+                    JsonNode firstRow = rowsNode.get(0);
+                    if (firstRow.isArray() && firstRow.size() > 0) {
+                        avgDuration = firstRow.get(0).asText();
+                    }
+                }
+            }
 
             if (System.getProperty("ENVIRONMENT") == null || "TEST".equalsIgnoreCase(System.getProperty("ENVIRONMENT"))) {
                 writePerfKpiData(startDate, endDate, kpiId, avgDuration, context);
@@ -246,42 +272,47 @@ public class PerfKpiService {
 
             context.getLogger().info(String.format("PerformanceKpiService - %s record successfully inserted into ADX, average[%s]", kpiId, avgDuration));
 
-            return String.valueOf(avgDuration);
+            return avgDuration;
 
         } catch (Exception e) {
             context.getLogger().severe(String.format("PerformanceKpiService - %s Error executing KPI calculation: %s", kpiId, e.getMessage()));
-            e.printStackTrace();
             throw e;
         }
     }
 
     /**
-     * Utility method that parse the AI response and return the result as string
-     * @param response response to parse
-     * @return
+     * Request the OAuth 2.0 token for Application Insights access
+     * @param tenantId the principal tenant id
+     * @param clientId the principal client id
+     * @param clientSecret the principal secret
+     * @return 
+     * @throws Exception
      */
-    private String parseAppInsightsResponse(String response) {
-        try {
-            ObjectMapper objectMapper = new ObjectMapper();
-    
-            JsonNode rootNode = objectMapper.readTree(response);  
-            JsonNode tablesNode = rootNode.path("tables");
-            if (tablesNode.isArray() && tablesNode.size() > 0) {
-                JsonNode firstTable = tablesNode.get(0);
-                JsonNode rowsNode = firstTable.path("rows");
-    
-                if (rowsNode.isArray() && rowsNode.size() > 0) {
-                    JsonNode firstRow = rowsNode.get(0);
-                    if (firstRow.isArray() && firstRow.size() > 0) {
-                        // return avg value
-                        return firstRow.get(0).asText(); 
-                    }
-                }
-            }
-            return "0";
-        } catch (Exception e) {
-            throw new RuntimeException("parseAppInsightsResponse - Error while parsing JSON response from AppInsight", e);
+    private String getAccessToken(String tenantId, String clientId, String clientSecret) throws Exception {
+        String tokenUrl = String.format("https://login.microsoftonline.com/%s/oauth2/v2.0/token", tenantId);
+        String body = String.format(
+            "grant_type=client_credentials&client_id=%s&client_secret=%s&scope=https://api.applicationinsights.io/.default",
+            clientId, clientSecret
+        );
+
+        HttpURLConnection conn = (HttpURLConnection) new URL(tokenUrl).openConnection();
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+        conn.setDoOutput(true);
+
+        try (OutputStream os = conn.getOutputStream()) {
+            os.write(body.getBytes(StandardCharsets.UTF_8));
+            os.flush();
         }
+
+        BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
+        String responseBody = reader.lines().collect(Collectors.joining("\n"));
+        reader.close();
+        conn.disconnect();
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode rootNode = objectMapper.readTree(responseBody);
+        return rootNode.path("access_token").asText();
     }
 
     /**
@@ -410,7 +441,7 @@ public class PerfKpiService {
                 "let start = datetime('%s');" +
                 "let end = datetime('%s');" +
                 "%s" +
-                "| where start >= startDate and end <= endDate" +
+                "| where startDate>= start and endDate <= end" +
                 "| summarize " +
                 "    avg_PERF01 = avgif(kpiValue, kpiId contains \"PERF-01\")," +
                 "    avg_PERF02 = floor(avgif(kpiValue, kpiId contains \"PERF-02\"), 1)," +
