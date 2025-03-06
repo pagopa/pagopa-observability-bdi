@@ -75,6 +75,7 @@ microservice-chart:
     ADX_SOURCE_TABLE: "ReEvent"
     ADX_PERF_TABLE: "BDI_PERF_KPI"
     APP_INSIGHTS_API_URL: "https://api.applicationinsights.io/v1/apps/58b37248-3089-47ba-aa07-a2844fabe46a/query"
+    APP_INSIGHTS_APP_ID: "58b37248-3089-47ba-aa07-a2844fabe46a"
     EVENT_HUB_NAME: "bdi-kpi-ingestion-dl"
     EVENT_HUB_NAMESPACE: "pagopa-u-itn-qi-evh.servicebus.windows.net"
     EVENT_HUB_KEY_NAME: "bdi-kpi-ingestion-dl-evt-tx"
@@ -86,12 +87,15 @@ microservice-chart:
     PERF-06_OPERATION_NAME: "u-nodo-per-pa-api-auth;rev=1 - 636cb7e9451c1c01c4186999" # nodoChiediFlussoRendicontazione
     AZURE_AD_TENANT_ID: "7788edaf-0346-4068-9d79-c868aed15b3d"
     AZURE_AD_CLIENT_ID: "74ae19a9-1309-4751-888e-48f85935622e"
+    AZURE_AD_AI_TENANT_ID: "7788edaf-0346-4068-9d79-c868aed15b3d"
+    AZURE_AD_AI_CLIENT_ID: "19324b8f-0bdf-4036-bf15-2cd501f363c0"
   envSecret:
     APPLICATIONINSIGHTS_CONNECTION_STRING: "ai-u-connection-string"
     AZURE_AD_CLIENT_SECRET: "azure-ad-client-secret"
     APP_INSIGHTS_API_KEY: "bdi-ai-api-key"
     EVENT_HUB_KEY: "evh-tx-bdi-kpi-key"
     BETTERSTACK_API_KEY: "betterstack-api-key"
+    AZURE_AD_AI_CLIENT_SECRET: "azure-ad-ai-client-secret"
   keyvault:
     name: "pagopa-u-qi-kv"
     tenantId: "7788edaf-0346-4068-9d79-c868aed15b3d"
