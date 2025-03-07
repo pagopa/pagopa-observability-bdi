@@ -19,17 +19,22 @@ on:
           - uat
           - prod
           - all
-      semver:
-        required: true
-        type: choice
-        description: Select the new Semantic Version
-        options:
-          - major
-          - minor
-          - patch
-          - buildNumber
-          - skip
+      # semver:
+      #   required: true
+      #   type: choice
+      #   description: Select the new Semantic Version
+      #   options:
+      #     - major
+      #     - minor
+      #     - patch
+      #     - buildNumber
+      #     - skip
         default: skip
+      skip_release:
+          required: false
+          type: boolean
+          description: Skip release step
+          default: false
       beta:
         required: false
         type: boolean
@@ -74,7 +79,7 @@ jobs:
       - if: ${{ github.ref_name != 'main' }}
         run: echo "SEMVER=buildNumber" >> $GITHUB_ENV
 
-      - if: ${{ inputs.semver == 'skip' }}
+      - if: ${{ inputs.skip_release}}
         run: echo "SEMVER=skip" >> $GITHUB_ENV
 
       - id: get_semver
