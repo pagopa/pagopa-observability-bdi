@@ -1,4 +1,4 @@
-name: collectKpiData
+name: Collect BDI KPI Data
 on:
   schedule:
     - cron: '0 1 * * *'
@@ -8,12 +8,14 @@ on:
       start_date:
         required: false
         type: string
-        description: Set start date
+        description: Set start date (default N/A)
+        default: "N/A"
 
       end_date:
         required: false
         type: string
-        description: Set start date
+        description: Set start date (default N/A)
+        default: "N/A"
 
       kpi_id:
         required: false
@@ -67,6 +69,24 @@ jobs:
 
         run: |          
           cd ./python/collect-bdi-kpi
+
+          # Provide "N/A" if the inputs are empty
+          START_DATE="${{ inputs.start_date }}"
+          END_DATE="${{ inputs.end_date }}"
+
+          if [[ -z "$START_DATE" ]]; then
+            START_DATE="N/A"
+          fi
+
+          if [[ -z "$END_DATE" ]]; then
+            END_DATE="N/A"
+          fi
+
+          echo "Running collect-perf-data.py with params:"
+          echo "kpi_id: ${{ inputs.kpi_id }}"
+          echo "start_date: $START_DATE"
+          echo "end_date: $END_DATE"
+
           python collect-perf-data.py --kpi_id ${{inputs.kpi_id}} --start_date ${{inputs.start_date}} --end_date ${{inputs.end_date}}
 
       - name: Send notification to Slack
