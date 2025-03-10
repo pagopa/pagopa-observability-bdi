@@ -8,13 +8,13 @@ on:
       start_date:
         required: false
         type: string
-        description: Set start date (default N/A)
+        description: Set start date (Pattern "yyyy-mm-ddThh:mm:ss"  default N/A)
         default: "N/A"
 
       end_date:
         required: false
         type: string
-        description: Set start date (default N/A)
+        description: Set start date (Pattern "yyyy-mm-ddThh:mm:ss"  default N/A)
         default: "N/A"
 
       kpi_id:

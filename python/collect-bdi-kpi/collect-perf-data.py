@@ -60,12 +60,12 @@ def main():
     # manage start_date and end_date
     print(f"inmput arguments: kpi_id[{args.kpi_id}] sart_date[{args.start_date}] end_date[{args.end_date}]")
     if args.start_date and args.start_date != "N/A":
-        start_date = datetime.strptime(args.start_date, '%Y-%m-%d %H:%M:%S')
+        start_date = datetime.strptime(args.start_date, '%Y-%m-%dT%H:%M:%S')
     else:
         start_date, _ = get_default_dates()
 
     if args.end_date and args.end_date != "N/A":
-        end_date = datetime.strptime(args.end_date, '%Y-%m-%d %H:%M:%S')
+        end_date = datetime.strptime(args.end_date, '%Y-%m-%dT%H:%M:%S')
     else:
         _, end_date = get_default_dates()
 
