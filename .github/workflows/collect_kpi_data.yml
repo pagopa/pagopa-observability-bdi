@@ -1,0 +1,80 @@
+name: collectKpiData
+on:
+  schedule:
+    - cron: '0 1 * * *'
+    
+  workflow_dispatch:
+    inputs:
+      start_date:
+        required: false
+        type: string
+        description: Set start date
+
+      end_date:
+        required: false
+        type: string
+        description: Set start date
+
+      kpi_id:
+        required: false
+        type: choice
+        description: select kpi
+        options:
+          - ALL
+          - PERF-01
+          - PERF-02
+          - PERF-02E
+          - PERF-03
+          - PERF-04
+          - PERF-05
+          - PERF-06
+        default: ALL
+
+      notify:
+        description: 'notify report results'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  id-token: write
+  contents: read
+  deployments: write
+
+jobs:
+  
+  collect_data_script:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@1f9a0c22da41e6ebfa534300ef656657ea2c6707
+
+      - name: Install dependencies
+        run: |
+          pip install -r ./python/collect-bdi-kpi/requirements.txt
+
+      - name: Run Collect Perf Data
+        shell: bash
+        env:
+          API_KEY: ${{ secrets.BDI_API_KEY }}
+          API_URL: "https://api.platform.pagopa.it/qi/perf-kpi-bdi/v1/perf-data"
+
+        run: |          
+          cd ./python/collect-bdi-kpi
+          python collect-perf-data.py --kpi_id ${{inputs.kpi_id}} --start_date ${{inputs.start_date}} --end_date ${{inputs.end_date}}
+
+      - name: Send notification to Slack
+        id: slack
+        if: ${{ inputs.notify}}
+        uses: slackapi/slack-github-action@e28cf165c92ffef168d23c5c9000cffc8a25e117 #v1.24.0
+        with:
+          payload-file-path: "./payload.json"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
