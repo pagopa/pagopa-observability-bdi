@@ -2,15 +2,12 @@ openapi: 3.0.1
 info:
   title: qi-observability-perf-kpi
   description: API for monitoring performance KPIs.
-  version: 0.8.11
-
+  version: 0.8.12
 servers:
   - url: https://${hostname}
-
 tags:
   - name: observability-bdi
     description: APIs for BDI and observability
-
 paths:
   /info:
     get:
@@ -40,16 +37,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-
   /perf-data:
     post:
       tags:
         - observability-bdi
       summary: Collect Performance Data (POST)
-      description: |
-        Collect performance KPI data for a specific interval and KPI ID.  
-        If no dates are provided, defaults to the previous month.  
-        If no KPI ID is provided, collects all KPIs.
+      description: "Collect performance KPI data for a specific interval and KPI ID.  \nIf no dates are provided, defaults to the previous month.  \nIf no KPI ID is provided, collects all KPIs.\n"
       parameters:
         - name: startDate
           in: query
@@ -113,8 +106,7 @@ paths:
         '401':
           description: Unauthorized. Authentication required or invalid credentials.
         '500':
-          description: Internal server error. The system encountered an unexpected issue during data collection.  
-            This response provides details about the error for debugging purposes.
+          description: Internal server error. The system encountered an unexpected issue during data collection. This response provides details about the error for debugging purposes.
           content:
             application/json:
               schema:
@@ -126,7 +118,6 @@ paths:
                     status: "500 INTERNAL_SERVER_ERROR"
                     message: "CollectPerformanceData - HTTP triggered. Error: NullPointerException"
                     details: "CollectPerfData - Error: NullPointerException at line 42"
-
   /quarter/{quarter}:
     post:
       tags:
@@ -158,17 +149,17 @@ paths:
         '200':
           description: |
             KPI data aggregated and published successfully.
-            
+
             **Response fields**:
-            
+
             - `status`: Result status of the operation. `"OK"` in case of success.
             - `message`: Human-readable summary of the executed operation.
             - `data`: Array of aggregated KPI strings, one for each month of the selected quarter.
-            
+
             Each string contains KPI values in the following order (comma-separated):
-            
+
             `PERF-01, PERF-02, PERF-02E, PERF-03, PERF-04, PERF-05, PERF-06`
-            
+
             Example:
             ```
             [
@@ -193,7 +184,7 @@ paths:
                     description: |
                       Array containing aggregated KPI results for each month of the selected quarter.
                       Each item is a comma-separated string of KPI values in this order:
-                      
+
                       `PERF-01, PERF-02, PERF-02E, PERF-03, PERF-04, PERF-05, PERF-06`
                     items:
                       type: string
@@ -216,7 +207,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-
 components:
   schemas:
     ErrorResponse:
