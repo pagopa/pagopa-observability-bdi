@@ -87,7 +87,7 @@ jobs:
 
       - name: Send notification to Slack
         id: slack
-        if: ${{ inputs.notify}}
+        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.notify != 'false') || (github.event_name == 'schedule' && true) }}
         uses: slackapi/slack-github-action@e28cf165c92ffef168d23c5c9000cffc8a25e117 #v1.24.0
         with:
           payload-file-path: "./python/collect-bdi-kpi/payload.json"
