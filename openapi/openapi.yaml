@@ -4,7 +4,14 @@ info:
   description: API for monitoring performance KPIs.
   version: 0.8.12
 servers:
-  - url: https://${hostname}
+  - url: https://api.dev.platform.pagopa.it/qi/perf-kpi-bdi/v1
+    description: Development environment
+  
+  - url: https://api.uat.platform.pagopa.it/qi/perf-kpi-bdi/v1
+    description: UAT (User Acceptance Testing) environment
+  
+  - url: https://api.platform.pagopa.it/qi/perf-kpi-bdi/v1
+    description: Production environment
 tags:
   - name: observability-bdi
     description: APIs for BDI and observability
@@ -73,6 +80,15 @@ paths:
               - PERF-05
               - PERF-06
               - ALL
+        - name: saveData
+          in: query
+          required: false
+          description: Tells if the calculated data will be saved on DB
+          schema:
+            type: string
+            enum:
+              - true
+              - false
       responses:
         '200':
           description: Successful KPI data collection response.

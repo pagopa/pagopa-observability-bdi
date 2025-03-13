@@ -69,8 +69,8 @@ public class CollectPerfDataTest {
         HttpResponseMessage response = collectPerfData.httpTrigger(request, context);
 
         assertNotNull(response);
-        verify(perfKpiService, never()).executePerf01Kpi(any(), any(), any());
-        verify(perfKpiService, never()).executePerf02Kpi(any(), any(), any());
-        verify(perfKpiService, never()).executePerf02EKpi(any(), any(), any());
+        verify(perfKpiService, never()).executePerf01Kpi(any(), any(), true, any());
+        verify(perfKpiService, never()).executePerf02Kpi(any(), any(), true,  any());
+        verify(perfKpiService, never()).executePerf02EKpi(any(), any(), true, any());
     }
 }

@@ -13,6 +13,7 @@ import com.microsoft.azure.functions.annotation.HttpTrigger;
 import it.gov.pagopa.observability.service.PerfKpiService;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -155,16 +156,30 @@ public class PerKpiAggregator {
 
     public static String serializeToJson(String year, String quarter, List<String> data) throws Exception {
 
-        ObjectMapper objectMapper = new ObjectMapper();
-        ObjectNode rootNode = objectMapper.createObjectNode();
-        rootNode.put("year", year);
-        rootNode.put("quarter", quarter);
+        LocalDateTime now = LocalDateTime.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+        String createDate = now.format(formatter);
 
-        ArrayNode dataArray = objectMapper.createArrayNode();
+        ObjectMapper objectMapper = new ObjectMapper();
+        ArrayNode rootNode = objectMapper.createArrayNode();
+        ObjectNode dataNode;
         for (String record : data) {
-            dataArray.add(record);
+            dataNode = objectMapper.createObjectNode();
+            dataNode.put("create_date", createDate);
+            dataNode.put("year", year);
+            dataNode.put("quarter", quarter);
+
+            String[] kpis = record.split(",");
+            dataNode.put("PERF-01", kpis[0]);
+            dataNode.put("PERF-02", kpis[1]);
+            dataNode.put("PERF-02E", kpis[2]);
+            dataNode.put("PERF-03", kpis[3]);
+            dataNode.put("PERF-04", kpis[4]);
+            dataNode.put("PERF-05", kpis[5]);
+            dataNode.put("PERF-06", kpis[6]);
+
+            rootNode.add(dataNode);
         }
-        rootNode.set("data", dataArray);
 
         return objectMapper.writeValueAsString(rootNode);
     }
