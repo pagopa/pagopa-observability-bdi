@@ -33,6 +33,7 @@ public class CollectPerfData {
         String startDateInput = request.getQueryParameters().get("startDate");
         String endDateInput = request.getQueryParameters().get("endDate");
         String kpiId = Optional.ofNullable(request.getQueryParameters().get("kpiId")).orElse("ALL_KPI");
+        boolean saveData = Optional.ofNullable(request.getQueryParameters().get("saveData")).orElse("true").equalsIgnoreCase("true");
 
         try {
             
@@ -57,7 +58,7 @@ public class CollectPerfData {
                 endDate = startDate.plusMonths(1).minusSeconds(1);
             }
 
-            context.getLogger().info(String.format("CollectPerfData - Processing interval: %s to %s, kpiId: %s", startDate, endDate, kpiId));
+            context.getLogger().info(String.format("CollectPerfData - Processing interval: %s to %s, kpiId: %s, saveData: %s", startDate, endDate, kpiId, saveData));
             
             // getting service instance        
             PerfKpiService service = new PerfKpiService();
@@ -74,10 +75,10 @@ public class CollectPerfData {
 
             switch (kpiId) {
                 case "PERF-01":
-                    rtOneKpi = service.executePerf01Kpi(startDate, endDate, context);
+                    rtOneKpi = service.executePerf01Kpi(startDate, endDate, saveData, context);
                     break;
                 case "PERF-02":
-                    rtOneKpi = service.executePerf02Kpi(startDate, endDate, context);
+                    rtOneKpi = service.executePerf02Kpi(startDate, endDate, saveData, context);
                     break;
                 case "PERF-02E":
                     // if startDate is not specified then startDate is now minus one hour
@@ -89,28 +90,28 @@ public class CollectPerfData {
                     endDate = startDate.plusHours(1);
                     context.getLogger().info(String.format("CollectPerf02EData - PERF-02E HTTP triggered. " +
                         "Processing interval: %s to %s", startDate, endDate));                
-                    rtOneKpi = service.executePerf02EKpi(startDate, endDate, context);
+                    rtOneKpi = service.executePerf02EKpi(startDate, endDate, saveData, context);
                     break;
                 case "PERF-03":
-                    rtOneKpi = service.executePerfKpi(startDate, endDate, "PERF-03", context);
+                    rtOneKpi = service.executePerfKpi(startDate, endDate, "PERF-03", saveData, context);
                     break;
                 case "PERF-04":
-                    rtOneKpi = service.executePerfKpi(startDate, endDate, "PERF-04", context);
+                    rtOneKpi = service.executePerfKpi(startDate, endDate, "PERF-04", saveData, context);
                     break;
                 case "PERF-05":
-                    rtOneKpi = service.executePerfKpi(startDate, endDate, "PERF-05", context);
+                    rtOneKpi = service.executePerfKpi(startDate, endDate, "PERF-05", saveData, context);
                     break;
                 case "PERF-06":
-                    rtOneKpi = service.executePerfKpi(startDate, endDate, "PERF-06", context);
+                    rtOneKpi = service.executePerfKpi(startDate, endDate, "PERF-06", saveData, context);
                     break;
                 default: // collect all kpis
-                    rtPerf01 = service.executePerf01Kpi(startDate, endDate, context);
-                    rtPerf02 = service.executePerf02Kpi(startDate, endDate, context);
-                    rtPerf02E = service.executePerf02EKpi(startDate, endDate, context);
-                    rtPerf03 = service.executePerfKpi(startDate, endDate, "PERF-03", context);
-                    rtPerf04 = service.executePerfKpi(startDate, endDate, "PERF-04", context);
-                    rtPerf05 = service.executePerfKpi(startDate, endDate, "PERF-05", context);
-                    rtPerf06 = service.executePerfKpi(startDate, endDate, "PERF-06", context);
+                    rtPerf01 = service.executePerf01Kpi(startDate, endDate, saveData, context);
+                    rtPerf02 = service.executePerf02Kpi(startDate, endDate, saveData, context);
+                    rtPerf02E = service.executePerf02EKpi(startDate, endDate, saveData, context);
+                    rtPerf03 = service.executePerfKpi(startDate, endDate, "PERF-03", saveData, context);
+                    rtPerf04 = service.executePerfKpi(startDate, endDate, "PERF-04", saveData, context);
+                    rtPerf05 = service.executePerfKpi(startDate, endDate, "PERF-05", saveData, context);
+                    rtPerf06 = service.executePerfKpi(startDate, endDate, "PERF-06", saveData, context);
                     break;
             }
             

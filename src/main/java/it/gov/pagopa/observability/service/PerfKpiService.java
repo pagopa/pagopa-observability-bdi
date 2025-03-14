@@ -79,7 +79,11 @@ public class PerfKpiService {
      * @return the number of total messages
      * @throws Exception
      */
-    public String executePerf02Kpi(LocalDateTime startDate, LocalDateTime endDate, ExecutionContext context) throws Exception {
+    public String executePerf02Kpi(
+        LocalDateTime startDate, 
+        LocalDateTime endDate, 
+        boolean saveData, 
+        ExecutionContext context) throws Exception {
 
         
         String perf02Query = String.format(
@@ -109,7 +113,13 @@ public class PerfKpiService {
 
         // insert the result into the destination table
         if (System.getProperty("ENVIRONMENT") == null || "TEST".equalsIgnoreCase(System.getProperty("ENVIRONMENT"))) {
-            writePerfKpiData(startDate, endDate, "PERF-02", Integer.toString(count), context);
+
+            // write kpi to db
+            if (saveData) {
+                writePerfKpiData(startDate, endDate, "PERF-02", Integer.toString(count), context);
+            } else {
+                context.getLogger().info("executePerf02Kpi - PERF-02 skip data persistence");
+            }
         }
 
         return String.valueOf(count);
@@ -125,7 +135,11 @@ public class PerfKpiService {
      * @return toal number of messages in error
      * @throws Exception
      */
-    public String executePerf02EKpi(LocalDateTime startDate, LocalDateTime endDate, ExecutionContext context) throws Exception {
+    public String executePerf02EKpi(
+        LocalDateTime startDate, 
+        LocalDateTime endDate, 
+        boolean saveData, 
+        ExecutionContext context) throws Exception {
 
         String perf0E2Query = String.format(
             "let start = datetime(%s);" + 
@@ -160,7 +174,13 @@ public class PerfKpiService {
 
         context.getLogger().info(String.format("executePerf02EKpi - PERF-02E Query Result[%s] startDate[%s] endDate[%s]", count, startDate, endDate));
 
-        writePerfKpiData(startDate, endDate, "PERF-02E", Integer.toString(count), context);
+        // write kpi to db
+        if (saveData) {
+            writePerfKpiData(startDate, endDate, "PERF-02E", Integer.toString(count), context);
+        } else {
+            context.getLogger().info("executePerf02EKpi -  PERF-02E skip data persistence");
+        }        
+
         return String.valueOf(count);
     }
 
@@ -174,7 +194,12 @@ public class PerfKpiService {
      * @return
      * @throws Exception
      */
-    public String executePerfKpi(LocalDateTime startDate, LocalDateTime endDate, String kpiId, ExecutionContext context) throws Exception {
+    public String executePerfKpi(
+        LocalDateTime startDate, 
+        LocalDateTime endDate, 
+        String kpiId, 
+        boolean saveData,
+        ExecutionContext context) throws Exception {
         try {
             context.getLogger().info(String.format("executePerfKpi - %s calculating KPI for period: %s to %s", kpiId, startDate, endDate));
 
@@ -267,15 +292,20 @@ public class PerfKpiService {
             }
 
             if (System.getProperty("ENVIRONMENT") == null || "TEST".equalsIgnoreCase(System.getProperty("ENVIRONMENT"))) {
-                writePerfKpiData(startDate, endDate, kpiId, avgDuration, context);
+                // write kpi to db
+                if (saveData) {
+                    writePerfKpiData(startDate, endDate, kpiId, avgDuration, context);
+                } else {
+                    context.getLogger().info(String.format("executePerfKpi - %s skip data persistence", kpiId));
+                }                
             }
 
-            context.getLogger().info(String.format("PerformanceKpiService - %s record successfully inserted into ADX, average[%s]", kpiId, avgDuration));
+            context.getLogger().info(String.format("executePerfKpi - %s record successfully inserted into ADX, average[%s]", kpiId, avgDuration));
 
             return avgDuration;
 
         } catch (Exception e) {
-            context.getLogger().severe(String.format("PerformanceKpiService - %s Error executing KPI calculation: %s", kpiId, e.getMessage()));
+            context.getLogger().severe(String.format("executePerfKpi - %s Error executing KPI calculation: %s", kpiId, e.getMessage()));
             throw e;
         }
     }
@@ -323,7 +353,7 @@ public class PerfKpiService {
      * @param context Azure function context
      * @throws Exception
      */
-    public String executePerf01Kpi(LocalDateTime startDate, LocalDateTime endDate, ExecutionContext context) throws Exception {
+    public String executePerf01Kpi(LocalDateTime startDate, LocalDateTime endDate, boolean saveData, ExecutionContext context) throws Exception {
 
         DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         
@@ -356,7 +386,11 @@ public class PerfKpiService {
             context.getLogger().info(String.format("executePerf01Kpi - PERF-01 writing the kpi on ADX, availability[%s]", availabilty));
 
             // write kpi to db
-            writePerfKpiData(startDate, endDate, "PERF-01", availabilty, context);
+            if (saveData) {
+                writePerfKpiData(startDate, endDate, "PERF-01", availabilty, context);
+            } else {
+                context.getLogger().info("executePerf01Kpi - PERF-01 skip data persistence");
+            }
 
             return availabilty;
             

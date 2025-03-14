@@ -1,0 +1,84 @@
+name: Send Quarter KPI
+on:
+  schedule:
+    - cron: '0 8 5 1,4,7,10 *' # At 08:00 AM, on day 5 of the month, only in January, April, July, and October
+    
+  workflow_dispatch:
+    inputs:
+      year:
+        required: false
+        type: string
+        description: Set the year (Pattern "yyyy")  default current year
+        default: "N/A"
+
+      quarter:
+        required: false
+        type: choice
+        description: select kpi
+        options:
+          - LAST 
+          - Q1
+          - Q2
+          - Q3
+          - Q4
+        default: LAST
+
+      notify:
+        description: 'notify report results'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  id-token: write
+  contents: read
+  deployments: write
+
+jobs:
+  
+  send_quarter_data_script:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@65d7f2d534ac1bc67fcd62888c5f4f3d2cb2b236 # v4
+        with:
+          python-version: '3.12'
+
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@1f9a0c22da41e6ebfa534300ef656657ea2c6707
+
+      - name: Install dependencies
+        run: |
+          pip install -r ./python/collect-bdi-kpi/requirements.txt
+
+      - name: Run Send Quarter Data
+        shell: bash
+        env:
+          API_KEY: ${{ secrets.BDI_API_KEY }}
+          API_URL: "https://api.platform.pagopa.it/qi/perf-kpi-bdi/v1/quarter"
+          PYTHONUNBUFFERED: "1"
+          YEAR_INPUT: ${{ inputs.year || 'N/A' }}
+          QUARTER_INPUT: ${{ inputs.quarter || 'LAST' }}
+
+        run: |          
+          cd ./python/collect-bdi-kpi
+
+          YEAR="$YEAR_INPUT"
+          QUARTER="$QUARTER_INPUT"
+
+          echo "Running collect-perf-data.py with params:"
+          echo "year: $YEAR"
+          echo "QUARTER": $QUARTER"
+
+          python collect-perf-data.py --year "$YEAR" --quarter "$QUARTER"
+
+      - name: Send notification to Slack
+        id: slack
+        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.notify != 'false') || (github.event_name == 'schedule' && true) }}
+        uses: slackapi/slack-github-action@e28cf165c92ffef168d23c5c9000cffc8a25e117 #v1.24.0
+        with:
+          payload-file-path: "./python/collect-bdi-kpi/payload.json"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
