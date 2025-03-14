@@ -160,6 +160,25 @@ public class PerKpiAggregator {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
         String createDate = now.format(formatter);
 
+        int startMonth;
+        switch (quarter) {
+            case "Q1":
+                startMonth = 1;
+                break;
+            case "Q2":
+                startMonth = 4;
+                break;
+            case "Q3":
+                startMonth = 7;
+                break;
+            case "Q4":
+                startMonth = 10;
+                break;
+            default:
+                startMonth = 1;
+                break;
+        }
+
         ObjectMapper objectMapper = new ObjectMapper();
         ArrayNode rootNode = objectMapper.createArrayNode();
         ObjectNode dataNode;
@@ -168,6 +187,7 @@ public class PerKpiAggregator {
             dataNode.put("create_date", createDate);
             dataNode.put("year", year);
             dataNode.put("quarter", quarter);
+            dataNode.put("month", String.format("%02d", startMonth));
 
             String[] kpis = record.split(",");
             dataNode.put("PERF-01", kpis[0]);
@@ -179,6 +199,7 @@ public class PerKpiAggregator {
             dataNode.put("PERF-06", kpis[6]);
 
             rootNode.add(dataNode);
+            startMonth++;
         }
 
         return objectMapper.writeValueAsString(rootNode);
