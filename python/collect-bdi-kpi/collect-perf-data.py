@@ -76,7 +76,25 @@ def main():
     # initialize payload JSON
     payload = {
         "text": "✅ *DBI Observability - data collection report*",
-        "blocks": []
+        "blocks": [
+            {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": "Perfromance KPI collected"
+                }
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"📈 *Live Dashboard disponibile ➡️ [BDI KPI Dashboard](https://pagopa-p-weu-grafana-avb5f4e0fqawgyea.weu.grafana.azure.com/d/aeg7an54oog74f/observability-bdi?orgId=1)*"
+                }
+            },
+            {
+                "type": "divider"
+            }
+        ]
     }
 
     # initialize data interval
