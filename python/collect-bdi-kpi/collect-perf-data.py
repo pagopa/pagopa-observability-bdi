@@ -85,10 +85,13 @@ def main():
                 }
             },
             {
+                "type": "divider"
+            },            
+            {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"📈 *Live Dashboard disponibile ➡️ [BDI KPI Dashboard](https://pagopa-p-weu-grafana-avb5f4e0fqawgyea.weu.grafana.azure.com/d/aeg7an54oog74f/observability-bdi?orgId=1)*"
+                    "text": f"📈 *Live Dashboard disponibile ➡️ <https://pagopa-p-weu-grafana-avb5f4e0fqawgyea.weu.grafana.azure.com/d/aeg7an54oog74f/observability-bdi?orgId=1|BDI KPI Dashboard>*"
                 }
             },
             {
