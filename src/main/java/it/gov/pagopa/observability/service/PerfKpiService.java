@@ -478,13 +478,13 @@ public class PerfKpiService {
                 "| where startDate>= start and endDate <= end" +
                 "| summarize " +
                 "    avg_PERF01 = avgif(kpiValue, kpiId contains \"PERF-01\")," +
-                "    avg_PERF02 = floor(avgif(kpiValue, kpiId contains \"PERF-02\"), 1)," +
-                "    avg_PERF02E = floor(avgif(kpiValue, kpiId contains \"PERF-02E\"), 1)," +
+                "    sum_PERF02 = floor(sumif(kpiValue, kpiId contains \"PERF-02\"), 1)," +
+                "    sum_PERF02E = floor(sumif(kpiValue, kpiId contains \"PERF-02E\"), 1)," +
                 "    avg_PERF03 = floor(avgif(kpiValue, kpiId contains \"PERF-03\"), 1)," +
                 "    avg_PERF04 = floor(avgif(kpiValue, kpiId contains \"PERF-04\"), 1)," +
                 "    avg_PERF05 = floor(avgif(kpiValue, kpiId contains \"PERF-05\"), 1)," +
                 "    avg_PERF06 = floor(avgif(kpiValue, kpiId contains \"PERF-06\"), 1)" +
-                "| project avg_PERF01, avg_PERF02, avg_PERF02E, avg_PERF03, avg_PERF04, avg_PERF05, avg_PERF06",
+                "| project avg_PERF01, sum_PERF02, sum_PERF02E, avg_PERF03, avg_PERF04, avg_PERF05, avg_PERF06",
                 startDate, endDate, System.getenv("ADX_PERF_TABLE")
         );
         
@@ -507,16 +507,16 @@ public class PerfKpiService {
                 avg_PERF01 = "0.00";
             }
 
-            String avg_PERF02 = "0"; 
-            String avg_PERF02E = "0"; 
+            String sum_PERF02 = "0"; 
+            String sum_PERF02E = "0"; 
             String avg_PERF03 = "0"; 
             String avg_PERF04 = "0"; 
             String avg_PERF05 = "0"; 
             String avg_PERF06 = "0"; 
             
             try {
-                avg_PERF02 = resultSet.getString("avg_PERF02") != null ? resultSet.getString("avg_PERF02") : "0";
-                avg_PERF02E = resultSet.getString("avg_PERF02E") != null ? resultSet.getString("avg_PERF02E") : "0";
+                sum_PERF02 = resultSet.getString("sum_PERF02") != null ? resultSet.getString("sum_PERF02") : "0";
+                sum_PERF02E = resultSet.getString("sum_PERF02E") != null ? resultSet.getString("sum_PERF02E") : "0";
                 avg_PERF03 = resultSet.getString("avg_PERF03") != null ? resultSet.getString("avg_PERF03") : "0";
                 avg_PERF04 = resultSet.getString("avg_PERF04") != null ? resultSet.getString("avg_PERF04") : "0";
                 avg_PERF05 = resultSet.getString("avg_PERF05") != null ? resultSet.getString("avg_PERF05") : "0";
@@ -528,7 +528,7 @@ public class PerfKpiService {
             context.getLogger().severe(String.format("queryKpiAverages - kpi averages computed"));
             
             return String.format("%s,%s,%s,%s,%s,%s,%s",
-                avg_PERF01, avg_PERF02, avg_PERF02E, avg_PERF03, avg_PERF04, avg_PERF05, avg_PERF06);
+                avg_PERF01, sum_PERF02, sum_PERF02E, avg_PERF03, avg_PERF04, avg_PERF05, avg_PERF06);
             
         } else {
             context.getLogger().severe(String.format("queryKpiAverages - the query produced no result, returning the default value"));
