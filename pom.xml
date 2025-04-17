@@ -6,7 +6,7 @@
 
     <groupId>it.gov.pagopa.observability</groupId>
     <artifactId>bdi-observability-functions</artifactId>
-    <version>0.8.18-8-fix-deploy-wli-helm7</version>
+    <version>0.8.18-9-fix-deploy-wli-helm7</version>
     <packaging>jar</packaging>
 
     <name>Azure Custom Fn</name>
