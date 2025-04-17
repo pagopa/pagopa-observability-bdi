@@ -4,43 +4,43 @@ microservice-chart:
   fullnameOverride: ""
   image:
     repository: ghcr.io/pagopa/pagopa-observability-bdi
-    tag: "0.8.18-5-fix-deploy-wli-helm7"
+    tag: "0.8.18"
     pullPolicy: Always
   #  https://github.com/Azure/azure-functions-host/blob/dev/src/WebJobs.Script.WebHost/Controllers/HostController.cs
   livenessProbe:
     httpGet:
       path: /info
-      port: 8080
+      port: 80
     initialDelaySeconds: 60
     failureThreshold: 6
     periodSeconds: 10
   readinessProbe:
     httpGet:
       path: /info
-      port: 8080
+      port: 80
     initialDelaySeconds: 60
     failureThreshold: 6
     periodSeconds: 10
   deployment:
     create: true
   ports:
-    - 8080 #http
+    - 80 #http
     - 12345 #jmx-exporter
   service:
     create: true
     type: ClusterIP
     ports:
-      - 8080 #http
+      - 80 #http
       - 12345 #jmx-exporter
   ingress:
     create: true
     host: "weudev.qi.internal.dev.platform.pagopa.it"
     path: /pagopa-qi-observabilty-bdi-service/(.*)
-    servicePort: 8080
+    servicePort: 80
   serviceAccount:
-    name: "qi-workload-identity"
-  azure:
-    workloadIdentityClientId: <workload-identity-client-id-set-automatically-by-gha>
+    create: false
+    annotations: {}
+    name: ""
   podAnnotations: {}
   podSecurityContext:
     seccompProfile:
