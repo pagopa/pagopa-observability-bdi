@@ -38,9 +38,7 @@ microservice-chart:
     path: /pagopa-qi-observabilty-bdi-service/(.*)
     servicePort: 80
   serviceAccount:
-    create: false
-    annotations: {}
-    name: ""
+    name: "qi-workload-identity"
   podAnnotations: {}
   podSecurityContext:
     seccompProfile:
