@@ -39,6 +39,8 @@ microservice-chart:
     servicePort: 80
   serviceAccount:
     name: "qi-workload-identity"
+  azure:
+    workloadIdentityClientId: <workload-identity-client-id-set-automatically-by-gha>
   podAnnotations: {}
   podSecurityContext:
     seccompProfile:
