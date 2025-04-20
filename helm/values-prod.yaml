@@ -4,7 +4,7 @@ microservice-chart:
   fullnameOverride: ""
   image:
     repository: ghcr.io/pagopa/pagopa-observability-bdi
-    tag: "0.8.19-1-update-helm-750-wl"
+    tag: "0.8.19-2-update-helm-750-wl"
     pullPolicy: Always
   #  https://github.com/Azure/azure-functions-host/blob/dev/src/WebJobs.Script.WebHost/Controllers/HostController.cs
   livenessProbe:

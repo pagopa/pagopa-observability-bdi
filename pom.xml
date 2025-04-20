@@ -6,7 +6,7 @@
 
     <groupId>it.gov.pagopa.observability</groupId>
     <artifactId>bdi-observability-functions</artifactId>
-    <version>0.8.19-1-update-helm-750-wl</version>
+    <version>0.8.19-2-update-helm-750-wl</version>
     <packaging>jar</packaging>
 
     <name>Azure Custom Fn</name>
