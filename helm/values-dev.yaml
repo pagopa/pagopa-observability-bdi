@@ -11,7 +11,7 @@ pagopa-observability-bdi:
     handlerType: httpGet
     httpGet:
       path: /info
-      port: 80
+      port: 8080
     initialDelaySeconds: 60
     failureThreshold: 6
     periodSeconds: 10
@@ -19,26 +19,23 @@ pagopa-observability-bdi:
     handlerType: httpGet
     httpGet:
       path: /info
-      port: 80
+      port: 8080
     initialDelaySeconds: 60
     failureThreshold: 6
     periodSeconds: 10
   deployment:
     create: true
-  ports:
-    - 80 #http
-    - 12345 #jmx-exporter
   service:
     create: true
     type: ClusterIP
     ports:
-      - 80 #http
+      - 8080 #http
       - 12345 #jmx-exporter
   ingress:
     create: true
     host: "weudev.qi.internal.dev.platform.pagopa.it"
     path: /pagopa-qi-observabilty-bdi-service/(.*)
-    servicePort: 80
+    servicePort: 8080
   serviceAccount:
     name: "qi-workload-identity"
   azure:
@@ -69,6 +66,7 @@ pagopa-observability-bdi:
           type: Utilization # Allowed types are 'Utilization' or 'AverageValue'
           value: "75"
   envConfig:
+    ASPNETCORE_URLS: "http://*:8080"
     ENVIRONMENT: "dev"
     WEBSITE_SITE_NAME: "pagopaobservabilitybdi"
     FUNCTIONS_WORKER_RUNTIME: "java"
