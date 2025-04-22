@@ -1,4 +1,4 @@
-microservice-chart:
+pagopa-observability-bdi:
   namespace: "qi"
   nameOverride: ""
   fullnameOverride: ""
@@ -8,6 +8,7 @@ microservice-chart:
     pullPolicy: Always
   #  https://github.com/Azure/azure-functions-host/blob/dev/src/WebJobs.Script.WebHost/Controllers/HostController.cs
   livenessProbe:
+    handlerType: httpGet
     httpGet:
       path: /info
       port: 80
@@ -15,6 +16,7 @@ microservice-chart:
     failureThreshold: 6
     periodSeconds: 10
   readinessProbe:
+    handlerType: httpGet
     httpGet:
       path: /info
       port: 80
@@ -38,9 +40,7 @@ microservice-chart:
     path: /pagopa-qi-observabilty-bdi-service/(.*)
     servicePort: 80
   serviceAccount:
-    create: false
-    annotations: {}
-    name: ""
+    name: "qi-workload-identity"
   podAnnotations: {}
   podSecurityContext:
     seccompProfile:
@@ -104,3 +104,5 @@ microservice-chart:
   affinity: {}
   canaryDelivery:
     create: false
+  azure:
+    workloadIdentityClientId: <workload-identity-client-id-set-automatically-by-gha>
