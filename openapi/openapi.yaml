@@ -2,7 +2,7 @@ openapi: 3.0.1
 info:
   title: qi-observability-perf-kpi
   description: API for monitoring performance KPIs.
-  version: 0.8.19-1-PIDM-481-update-helm-chart-version
+  version: 0.8.20
 servers:
   - url: https://api.dev.platform.pagopa.it/qi/perf-kpi-bdi/v1
     description: Development environment
