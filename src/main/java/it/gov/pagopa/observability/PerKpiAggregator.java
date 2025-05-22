@@ -190,13 +190,13 @@ public class PerKpiAggregator {
             dataNode.put("month", String.format("%02d", startMonth));
 
             String[] kpis = record.split(",");
-            dataNode.put("PERF-01", kpis[0]);
-            dataNode.put("PERF-02", kpis[1]);
-            dataNode.put("PERF-02E", kpis[2]);
-            dataNode.put("PERF-03", kpis[3]);
-            dataNode.put("PERF-04", kpis[4]);
-            dataNode.put("PERF-05", kpis[5]);
-            dataNode.put("PERF-06", kpis[6]);
+            dataNode.put("PERF_01", kpis[0]);
+            dataNode.put("PERF_02", kpis[1]);
+            dataNode.put("PERF_02E", kpis[2]);
+            dataNode.put("PERF_03", kpis[3]);
+            dataNode.put("PERF_04", kpis[4]);
+            dataNode.put("PERF_05", kpis[5]);
+            dataNode.put("PERF_06", kpis[6]);
 
             rootNode.add(dataNode);
             startMonth++;
