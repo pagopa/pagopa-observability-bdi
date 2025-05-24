@@ -183,6 +183,7 @@ public class PerKpiAggregator {
         ArrayNode rootNode = objectMapper.createArrayNode();
         ObjectNode dataNode;
         for (String record : data) {
+            
             dataNode = objectMapper.createObjectNode();
             dataNode.put("create_date", createDate);
             dataNode.put("year", year);
