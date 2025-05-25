@@ -11,6 +11,10 @@ on:
         required: true
         description: The environment target of the job
         type: string
+      image_tag:
+        required: false
+        type: string
+        description: Docker image tag to deploy
 
 env:
   NAMESPACE: qi
