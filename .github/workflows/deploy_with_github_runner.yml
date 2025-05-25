@@ -62,7 +62,10 @@ jobs:
           cluster_name: ${{ vars.CLUSTER_NAME }}
           resource_group: ${{ vars.CLUSTER_RESOURCE_GROUP }}
           app_name: ${{ env.APP_NAME }}
-          helm_upgrade_options: '--debug --set pagopa-observability-bdi.azure.workloadIdentityClientId=${{vars.WORKLOAD_IDENTITY_ID}}'
+          helm_upgrade_options: >- 
+            --debug 
+            --set pagopa-observability-bdi.azure.workloadIdentityClientId=${{vars.WORKLOAD_IDENTITY_ID}} 
+            --set microservice-chart.image.tag=${{ inputs.image_tag }}
 
   cleanup_runner:
     name: Cleanup Runner
