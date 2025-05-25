@@ -144,6 +144,7 @@ jobs:
     with:
       environment: ${{ matrix.environment }}
       target: ${{ needs.setup.outputs.environment }}
+      image_tag: ${{ needs.release.outputs.version }}
     secrets: inherit
 
   notify:
