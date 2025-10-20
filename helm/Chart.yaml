@@ -6,6 +6,6 @@ version: 0.79.0
 appVersion: 0.9.8
 dependencies:
   - name: microservice-chart
-    version: 7.5.0
+    version: 8.0.2
     alias: pagopa-observability-bdi
     repository: "https://pagopa.github.io/aks-microservice-chart-blueprint"
