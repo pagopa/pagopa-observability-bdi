@@ -2,14 +2,14 @@ name: Send Quarter KPI
 on:
   schedule:
     - cron: '0 8 5 1,4,7,10 *' # At 08:00 AM, on day 5 of the month, only in January, April, July, and October
-    
+
   workflow_dispatch:
     inputs:
       year:
         required: false
         type: string
         description: Set the year (Pattern "yyyy")  default current year
-        default: "N/A"
+        default: ""
 
       quarter:
         required: false
@@ -59,7 +59,7 @@ jobs:
           API_URL: "https://api.platform.pagopa.it/qi/perf-kpi-bdi/v1/quarter"
           PYTHONUNBUFFERED: "1"
           YEAR_INPUT: ${{ inputs.year || 'N/A' }}
-          QUARTER_INPUT: ${{ inputs.quarter || 'LAST' }}
+          QUARTER_INPUT: ${{ inputs.quarter || '' }}
 
         run: |          
           cd ./python/collect-bdi-kpi
