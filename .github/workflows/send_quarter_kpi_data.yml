@@ -69,7 +69,7 @@ jobs:
 
           echo "Running collect-perf-data.py with params:"
           echo "year: $YEAR"
-          echo "QUARTER": $QUARTER"
+          echo "QUARTER: $QUARTER"
 
           python collect-perf-data.py --year "$YEAR" --quarter "$QUARTER"
 
