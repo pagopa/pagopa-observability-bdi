@@ -71,7 +71,7 @@ jobs:
           echo "year: $YEAR"
           echo "QUARTER: $QUARTER"
 
-          python collect-perf-data.py --year "$YEAR" --quarter "$QUARTER"
+          python send-quarter-data.py --year "$YEAR" --quarter "$QUARTER"
 
       - name: Send notification to Slack
         id: slack
