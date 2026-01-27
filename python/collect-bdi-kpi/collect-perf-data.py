@@ -81,7 +81,7 @@ def main():
                 "type": "header",
                 "text": {
                     "type": "plain_text",
-                    "text": "Perfromance KPI collected"
+                    "text": "Performance KPI collected"
                 }
             },
             {
