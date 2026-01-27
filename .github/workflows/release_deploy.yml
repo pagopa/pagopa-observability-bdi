@@ -118,7 +118,7 @@ jobs:
           semver: ${{ needs.setup.outputs.semver }}
           github_token: ${{ secrets.BOT_TOKEN_GITHUB }}
           beta: ${{ inputs.beta }}
-          skip_ci: ${{ inputs.beta }}
+          skip_ci: false
 
   image:
     needs: [ setup, release ]
