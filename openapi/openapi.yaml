@@ -2,7 +2,7 @@ openapi: 3.0.1
 info:
   title: qi-observability-perf-kpi
   description: API for monitoring performance KPIs.
-  version: 0.9.11
+  version: 0.9.12
 servers:
   - url: https://api.dev.platform.pagopa.it/qi/perf-kpi-bdi/v1
     description: Development environment

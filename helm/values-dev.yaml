@@ -106,6 +106,6 @@ pagopa-observability-bdi:
     create: false
 microservice-chart:
   image:
-    tag: 0.9.11
+    tag: 0.9.12
   canaryDelivery:
     create: false
