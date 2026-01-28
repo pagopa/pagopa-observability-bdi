@@ -119,6 +119,19 @@ jobs:
           github_token: ${{ secrets.BOT_TOKEN_GITHUB }}
           beta: ${{ inputs.beta }}
           skip_ci: false
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/bin/yq
+      - name: Align helm image tag with release
+        run: |
+          yq -i '.pagopa-observability-bdi.image.tag = "${{ steps.release.outputs.version }}"' helm/values-dev.yaml
+          yq -i '.pagopa-observability-bdi.image.tag = "${{ steps.release.outputs.version }}"' helm/values-uat.yaml
+          yq -i '.pagopa-observability-bdi.image.tag = "${{ steps.release.outputs.version }}"' helm/values-prod.yaml
+          
+          git add helm/values-*.yaml
+          git commit -m "chore: align pagopa-observability-bdi image tag to release ${{ steps.release.outputs.version }}" || echo "No changes to commit"
+          git push          
 
   image:
     needs: [ setup, release ]
