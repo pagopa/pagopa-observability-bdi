@@ -1,10 +1,10 @@
-pagopa-observability-bdi:
+microservice-chart:
   namespace: "qi"
   nameOverride: ""
   fullnameOverride: ""
   image:
     repository: ghcr.io/pagopa/pagopa-observability-bdi
-    tag: "0.9.8"
+    tag: "0.9.17"
     pullPolicy: Always
   #  https://github.com/Azure/azure-functions-host/blob/dev/src/WebJobs.Script.WebHost/Controllers/HostController.cs
   livenessProbe:
@@ -104,8 +104,3 @@ pagopa-observability-bdi:
     create: false
   azure:
     workloadIdentityClientId: <workload-identity-client-id-set-automatically-by-gha>
-microservice-chart:
-  image:
-    tag: 0.9.17
-  canaryDelivery:
-    create: false
