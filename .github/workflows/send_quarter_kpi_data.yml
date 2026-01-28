@@ -1,8 +1,8 @@
 name: Send Quarter KPI
 on:
   schedule:
-    - cron: '0 8 5 1,4,7,10 *' # At 08:00 AM, on day 5 of the month, only in January, April, July, and October
-
+    - cron: '42 19 28 1 *' # At 08:00 AM, on day 5 of the month, only in January, April, July, and October
+    
   workflow_dispatch:
     inputs:
       year:
