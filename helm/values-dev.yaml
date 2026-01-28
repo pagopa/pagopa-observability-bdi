@@ -1,4 +1,4 @@
-microservice-chart:
+pagopa-observability-bdi:
   namespace: "qi"
   nameOverride: ""
   fullnameOverride: ""
