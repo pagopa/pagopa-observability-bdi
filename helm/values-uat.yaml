@@ -106,6 +106,6 @@ pagopa-observability-bdi:
     workloadIdentityClientId: <workload-identity-client-id-set-automatically-by-gha>
 microservice-chart:
   image:
-    tag: 0.9.22
+    tag: 0.9.23
   canaryDelivery:
     create: false
