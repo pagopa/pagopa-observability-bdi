@@ -1,6 +1,6 @@
 apiVersion: v2
 name: pagopa-observability-bdi
-description: Microservice description
+description: Collecting performance data about pagoPA platform
 type: application
 version: 0.88.0
 appVersion: 0.9.17

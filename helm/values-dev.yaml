@@ -1,4 +1,4 @@
-pagopa-observability-bdi:
+microservice-chart:
   namespace: "qi"
   nameOverride: ""
   fullnameOverride: ""
@@ -102,10 +102,5 @@ pagopa-observability-bdi:
   nodeSelector: {}
   tolerations: []
   affinity: {}
-  canaryDelivery:
-    create: false
-microservice-chart:
-  image:
-    tag: 0.9.17
   canaryDelivery:
     create: false
