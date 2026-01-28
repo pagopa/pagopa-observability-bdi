@@ -104,3 +104,8 @@ pagopa-observability-bdi:
     create: false
   azure:
     workloadIdentityClientId: <workload-identity-client-id-set-automatically-by-gha>
+microservice-chart:
+  image:
+    tag: 0.9.21
+  canaryDelivery:
+    create: false

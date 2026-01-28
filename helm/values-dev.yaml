@@ -104,3 +104,8 @@ pagopa-observability-bdi:
   affinity: {}
   canaryDelivery:
     create: false
+microservice-chart:
+  image:
+    tag: 0.9.21
+  canaryDelivery:
+    create: false
