@@ -1,3 +1,4 @@
+import argparse
 import os
 import sys
 import json
@@ -62,13 +63,18 @@ def main(year, quarter):
         sys.exit(1)
 
 if __name__ == '__main__':
-    if len(sys.argv) != 5:
-        print("Usage: python send-quarter-data.py <year> <quarter>")
-        sys.exit(1)
+    
+    print("ℹ️ Parsing arguments...")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--year", default=str(datetime.now().year))
+    parser.add_argument("--quarter", default="LAST")
 
-    input_year = sys.argv[2]
-    input_quarter = sys.argv[4].upper()
+    args = parser.parse_args()
 
+    input_year = args.year
+    input_quarter = args.quarter.upper()
+    print(f"ℹ️ Input arguments: year[{input_year}] quarter[{input_quarter}]")
+    
     if input_quarter not in ['Q1', 'Q2', 'Q3', 'Q4', 'LAST']:
         print("⚠️  Error: The parameter quarter must be one of 'Q1', 'Q2', 'Q3', 'Q4', 'LAST'")
         sys.exit(1)
