@@ -91,11 +91,11 @@ pagopa-observability-bdi:
     AZURE_AD_AI_CLIENT_ID: "cd5c171b-324f-4ccf-ada5-895a7b2d4fb8"
   envSecret:
     APPLICATIONINSIGHTS_CONNECTION_STRING: "ai-d-connection-string"
-    AZURE_AD_CLIENT_SECRET: "azure-ad-client-secret"
+    AZURE_AD_CLIENT_SECRET: "azure-ad-client-secret" # managed by terraform
     APP_INSIGHTS_API_KEY: "bdi-ai-api-key"
     EVENT_HUB_KEY: "evh-tx-bdi-kpi-key"
     BETTERSTACK_API_KEY: "betterstack-api-key"
-    AZURE_AD_AI_CLIENT_SECRET: "azure-ad-ai-client-secret"
+    AZURE_AD_AI_CLIENT_SECRET: "pagopa-d-qi-client-secret" # manually managed secret
   keyvault:
     name: "pagopa-d-qi-kv"
     tenantId: "7788edaf-0346-4068-9d79-c868aed15b3d"
