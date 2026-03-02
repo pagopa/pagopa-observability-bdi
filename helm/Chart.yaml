@@ -2,8 +2,8 @@ apiVersion: v2
 name: pagopa-observability-bdi
 description: Collecting performance data about pagoPA platform
 type: application
-version: 0.97.0
-appVersion: 0.9.26
+version: 0.98.0
+appVersion: 0.9.27
 dependencies:
   - name: microservice-chart
     version: 8.0.2
