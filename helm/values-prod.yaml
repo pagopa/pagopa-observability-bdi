@@ -4,7 +4,7 @@ pagopa-observability-bdi:
   fullnameOverride: ""
   image:
     repository: ghcr.io/pagopa/pagopa-observability-bdi
-    tag: "0.9.27"
+    tag: "0.9.28"
     pullPolicy: Always
   #  https://github.com/Azure/azure-functions-host/blob/dev/src/WebJobs.Script.WebHost/Controllers/HostController.cs
   livenessProbe:
@@ -112,6 +112,6 @@ pagopa-observability-bdi:
     workloadIdentityClientId: <workload-identity-client-id-set-automatically-by-gha>
 microservice-chart:
   image:
-    tag: 0.9.27
+    tag: 0.9.28
   canaryDelivery:
     create: false
