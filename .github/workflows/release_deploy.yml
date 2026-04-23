@@ -162,20 +162,20 @@ jobs:
       TENANT_ID: ${{ secrets.TENANT_ID }}
 
   notify:
-    needs: [ deploy_aks ]
+    needs: [ setup, release, deploy_aks ]
     runs-on: ubuntu-latest
     name: Notify
     if: always()
     steps:
       - name: Report Status
-        if: always()
+        if: ${{ needs.setup.outputs.environment == 'prod' }}
         uses: ravsamhq/notify-slack-action@be814b201e233b2dc673608aa46e5447c8ab13f2 # v2
         with:
           status: ${{ needs.deploy_aks.result }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          notify_when: 'failure,skipped,success'
-          notification_title: '{workflow} has {status_message}'
-          message_format: '{emoji} <{workflow_url}|{workflow}> {status_message} in <{repo_url}|{repo}>'
-          footer: 'Linked to Repo <{repo_url}|{repo}>'
+          notification_title: 'New Release on Production ${{ needs.release.outputs.version }} has {status_message}'
+          message_format: '{emoji} <{run_url}|{workflow}> {status_message} in <{repo_url}|{repo}>'
+          footer: 'Linked to <{workflow_url}| workflow file>'
+          icon_success: ':white_check_mark:'
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL_DEPLOY }}
