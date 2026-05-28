@@ -112,6 +112,6 @@ pagopa-observability-bdi:
     create: false
 microservice-chart:
   image:
-    tag: 0.9.28-3-PIDM-1599-update-deploy-action
+    tag: 0.9.29
   canaryDelivery:
     create: false
