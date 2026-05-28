@@ -11,7 +11,8 @@ RUN cd /src/java-function-app && \
     cp -a . /home/site/wwwroot
 
 # This image isn't ssh enabled
-FROM mcr.microsoft.com/azure-functions/java:4-java$JAVA_VERSION
+# Pinned to 4.1046.100-2 because 4.1048.200 breaks Java worker initialization (Function host is not running)
+FROM mcr.microsoft.com/azure-functions/java:4.1046.100-2-java$JAVA_VERSION
 
 ENV AzureWebJobsScriptRoot=/home/site/wwwroot \
     AzureFunctionsJobHost__Logging__Console__IsEnabled=true
