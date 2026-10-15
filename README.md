@@ -24,6 +24,19 @@ There is an example of a Http Trigger function.
 ### Test
 `curl http://localhost:7071/example` 
 
+### Jackson dependencies
+
+Jackson versions are managed together through `jackson-bom` in `pom.xml`,
+including transitive modules used by the Azure SDK. Update the
+`jackson.version` property rather than pinning individual Jackson dependencies:
+mixing versions can cause runtime errors such as `NoSuchMethodError` when
+parsing floating-point JSON values.
+
+Run `mvn -Dtest=JacksonCompatibilityTest test` to check that parsing path.
+After changing dependencies, stop the local Functions host, run
+`mvn clean package`, then restart it with `mvn azure-functions:run` so no
+outdated JARs remain in the packaged application.
+
 ---
 
 

@@ -96,7 +96,7 @@ public class PerfKpiService {
             "| project count",
             startDate, endDate, ADX_SOURCE_TABLE
         );
-        ConnectionStringBuilder csb = PerfKpiHelper.getConnectionStringBuilder();
+            ConnectionStringBuilder csb = PerfKpiHelper.getConnectionStringBuilder();
         Client kustoClient = ClientFactory.createClient(csb);
         KustoOperationResult result = kustoClient.executeQuery(ADX_DB_NAME, perf02Query);
         int count = 0;
