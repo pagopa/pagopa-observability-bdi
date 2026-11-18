@@ -69,6 +69,7 @@ pagopa-observability-bdi:
         metadata:
           value: "75"
   envConfig:
+    JAVA_OPTS: -XX:-UseBASE64Intrinsics -XX:UseAVX=2
     ASPNETCORE_URLS: "http://*:8080"
     ENVIRONMENT: "prod"
     WEBSITE_SITE_NAME: "pagopaobservabilitybdi"
